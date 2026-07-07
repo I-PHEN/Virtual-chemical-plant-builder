@@ -96,8 +96,8 @@ export function Environment() {
       <primitive object={envMap} attach="environment" />
 
       {/* deep atmospheric background */}
-      <color attach="background" args={["#050912"]} />
-      <fog attach="fog" args={["#050912", 30, 90]} />
+      <color attach="background" args={["#08090c"]} />
+      <fog attach="fog" args={["#08090c", 28, 85]} />
 
       {/* three-point lighting */}
       <ambientLight intensity={0.35} color="#94a3b8" />

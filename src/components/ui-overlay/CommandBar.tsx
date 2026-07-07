@@ -33,9 +33,9 @@ export function CommandBar({ onCommand }: CommandBarProps) {
   const presentTypes = Array.from(new Set(currentPlant.equipment.map((e) => e.type))) as EquipmentType[];
 
   return (
-    <div className="pointer-events-auto flex flex-wrap items-center gap-1 rounded-2xl border border-slate-700/50 bg-slate-900/80 p-1.5 shadow-2xl ring-1 ring-white/5 backdrop-blur-xl">
+    <div className="pointer-events-auto flex flex-wrap items-center gap-0.5 rounded-lg border border-slate-800/80 bg-slate-950/80 p-1 shadow-xl backdrop-blur">
       <QuickBtn
-        icon={<Route className="h-3.5 w-3.5" />}
+        icon={<Route className="h-3 w-3" />}
         label="Tour"
         onClick={() => {
           setTourStep(0);
@@ -43,38 +43,33 @@ export function CommandBar({ onCommand }: CommandBarProps) {
         }}
       />
       <QuickBtn
-        icon={<Map className="h-3.5 w-3.5" />}
+        icon={<Map className="h-3 w-3" />}
         label="Overview"
         onClick={() => onCommand("Give me an overview of this plant.")}
       />
       <QuickBtn
-        icon={<HelpCircle className="h-3.5 w-3.5" />}
+        icon={<HelpCircle className="h-3 w-3" />}
         label="Quiz"
         onClick={() => onCommand("Quiz me on this plant.")}
       />
-      <div className="mx-0.5 h-5 w-px bg-slate-700/60" />
+      <div className="mx-0.5 h-4 w-px bg-slate-800" />
 
-      {/* highlight dropdown */}
       <div className="relative">
         <QuickBtn
-          icon={<Eye className="h-3.5 w-3.5" />}
-          label={highlightType ? `Only ${highlightType}` : "Show only…"}
+          icon={<Eye className="h-3 w-3" />}
+          label={highlightType ? "Only" : "Filter"}
           onClick={() => setShowTemplates((s) => !s)}
         />
         {showTemplates && (
-          <div className="absolute bottom-full left-0 mb-2 w-48 overflow-hidden rounded-xl border border-slate-700/60 bg-slate-900/95 shadow-2xl backdrop-blur-xl">
-            <div className="border-b border-slate-700/40 px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-slate-500">
-              Show only
-            </div>
+          <div className="absolute bottom-full left-0 mb-1.5 w-40 overflow-hidden rounded-lg border border-slate-800 bg-slate-950/95 shadow-2xl backdrop-blur">
             <button
               onClick={() => {
                 setHighlight(null);
                 setShowTemplates(false);
               }}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-300 transition-colors hover:bg-slate-800"
+              className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-slate-300 hover:bg-slate-900"
             >
-              <EyeOff className="h-3 w-3" />
-              Show all
+              <EyeOff className="h-3 w-3" /> Show all
             </button>
             {presentTypes.map((t) => (
               <button
@@ -83,10 +78,10 @@ export function CommandBar({ onCommand }: CommandBarProps) {
                   setHighlight(t);
                   setShowTemplates(false);
                 }}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left text-xs text-slate-300 transition-colors hover:bg-slate-800"
+                className="flex w-full items-center gap-2 px-2.5 py-1.5 text-left text-[11px] text-slate-300 hover:bg-slate-900"
               >
                 <span
-                  className="inline-block h-2 w-2 rounded-full"
+                  className="h-1.5 w-1.5 rounded-full"
                   style={{ background: EQUIPMENT_LIBRARY[t].color }}
                 />
                 {EQUIPMENT_LIBRARY[t].singularName}s
@@ -97,26 +92,24 @@ export function CommandBar({ onCommand }: CommandBarProps) {
       </div>
 
       <QuickBtn
-        icon={<EyeOff className="h-3.5 w-3.5" />}
-        label="Show all"
+        icon={<EyeOff className="h-3 w-3" />}
+        label="All"
         onClick={() => {
           showAll();
-          onCommand("Show me everything again.");
         }}
       />
-      <div className="mx-0.5 h-5 w-px bg-slate-700/60" />
+      <div className="mx-0.5 h-4 w-px bg-slate-800" />
       <QuickBtn
-        icon={<Plus className="h-3.5 w-3.5" />}
-        label="New plant"
+        icon={<Plus className="h-3 w-3" />}
+        label="New"
         onClick={() => resetPlant()}
       />
       <QuickBtn
-        icon={<RotateCcw className="h-3.5 w-3.5" />}
-        label="Reset view"
+        icon={<RotateCcw className="h-3 w-3" />}
+        label="Reset"
         onClick={() => {
           showAll();
           setTourStep(null);
-          onCommand("Where are we?");
         }}
       />
     </div>
@@ -135,7 +128,7 @@ function QuickBtn({
   return (
     <button
       onClick={onClick}
-      className="flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-slate-200 transition-all hover:bg-slate-800 hover:text-white"
+      className="flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-medium text-slate-300 transition-colors hover:bg-slate-800 hover:text-white"
     >
       {icon}
       <span className="hidden sm:inline">{label}</span>

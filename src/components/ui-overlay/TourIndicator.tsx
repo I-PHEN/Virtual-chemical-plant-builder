@@ -16,11 +16,11 @@ export function TourIndicator() {
   const total = currentPlant.processSteps.length;
 
   return (
-    <div className="pointer-events-auto w-[340px] rounded-2xl border border-sky-500/30 bg-slate-900/85 p-4 shadow-2xl ring-1 ring-sky-500/10 backdrop-blur-xl">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-sky-300">
-          <MapPin className="h-3.5 w-3.5" />
-          Guided Tour · Step {step.order} / {total}
+    <div className="pointer-events-auto w-[280px] rounded-lg border border-slate-800/80 bg-slate-950/90 p-2.5 shadow-2xl backdrop-blur">
+      <div className="mb-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-1.5 text-[9px] font-medium uppercase tracking-wider text-sky-400">
+          <MapPin className="h-2.5 w-2.5" />
+          Tour · {step.order}/{total}
         </div>
         <button
           onClick={() => {
@@ -28,33 +28,30 @@ export function TourIndicator() {
             selectEquipment(null);
           }}
           aria-label="End tour"
-          className="rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
+          className="rounded p-0.5 text-slate-500 hover:bg-slate-800 hover:text-white"
         >
-          <X className="h-4 w-4" />
+          <X className="h-3 w-3" />
         </button>
       </div>
-      <h3 className="text-sm font-semibold text-white">{step.title}</h3>
-      <p className="mt-1 text-xs leading-relaxed text-slate-300">{step.description}</p>
+      <h3 className="text-[12px] font-semibold text-white">{step.title}</h3>
+      <p className="mt-0.5 text-[11px] leading-relaxed text-slate-400">{step.description}</p>
 
-      {/* progress bar */}
-      <div className="mt-3 flex gap-1">
+      <div className="mt-2 flex gap-0.5">
         {currentPlant.processSteps.map((s, i) => (
           <div
             key={s.order}
-            className={`h-1 flex-1 rounded-full transition-colors ${
-              i <= tourStep ? "bg-gradient-to-r from-sky-500 to-cyan-400" : "bg-slate-700"
-            }`}
+            className={`h-0.5 flex-1 rounded-full ${i <= tourStep ? "bg-sky-400" : "bg-slate-800"}`}
           />
         ))}
       </div>
 
-      <div className="mt-3 flex items-center justify-between">
+      <div className="mt-2 flex items-center justify-between">
         <button
           onClick={() => setTourStep(Math.max(0, tourStep - 1))}
           disabled={tourStep === 0}
-          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40"
+          className="flex items-center gap-0.5 rounded px-1.5 py-1 text-[10px] text-slate-400 hover:bg-slate-800 disabled:opacity-30"
         >
-          <ChevronLeft className="h-3.5 w-3.5" /> Prev
+          <ChevronLeft className="h-3 w-3" /> Prev
         </button>
         <button
           onClick={() => {
@@ -64,9 +61,9 @@ export function TourIndicator() {
             if (nextStep) selectEquipment(nextStep.equipmentId);
           }}
           disabled={tourStep === total - 1}
-          className="flex items-center gap-1 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-sky-500/25 transition-all hover:from-sky-400 hover:to-cyan-400 disabled:opacity-40"
+          className="flex items-center gap-0.5 rounded bg-slate-100 px-2 py-1 text-[10px] font-medium text-slate-900 hover:bg-white disabled:opacity-30"
         >
-          Next <ChevronRight className="h-3.5 w-3.5" />
+          Next <ChevronRight className="h-3 w-3" />
         </button>
       </div>
     </div>

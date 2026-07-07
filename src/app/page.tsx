@@ -47,8 +47,8 @@ export default function Home() {
   );
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-slate-950 text-white">
-      {/* 3D scene always mounted underneath (so transitions are smooth) */}
+    <main className="relative h-screen w-screen overflow-hidden bg-[#08090c] text-white">
+      {/* 3D scene fills the screen */}
       <div className="absolute inset-0">
         <PlantCanvas />
       </div>
@@ -58,44 +58,38 @@ export default function Home() {
         <WelcomeScreen onBuild={handleBuild} />
       )}
 
-      {/* HUD overlay once a plant is loaded */}
+      {/* HUD overlay once a plant is loaded — everything absolutely positioned, no scroll */}
       {currentPlant && !isGenerating && (
-        <div className="pointer-events-none absolute inset-0 flex flex-col justify-between">
-          {/* top bar */}
-          <div className="pointer-events-auto">
+        <>
+          {/* top-left: header */}
+          <div className="pointer-events-auto absolute left-0 right-0 top-0 z-10">
             <Header />
           </div>
 
-          {/* middle row: equipment panel on the right (chat is collapsed by default) */}
-          <div className="pointer-events-none flex flex-1 items-start justify-end gap-4 px-4 pt-2">
-            <EquipmentPanel />
-          </div>
-
-          {/* tour indicator (top-center under header) */}
-          <div className="pointer-events-none absolute left-1/2 top-20 -translate-x-1/2">
+          {/* top-center: tour indicator */}
+          <div className="pointer-events-none absolute left-1/2 top-14 z-10 -translate-x-1/2">
             <TourIndicator />
           </div>
 
-          {/* live caption bar — primary text interface while AI speaks */}
+          {/* right: equipment panel */}
+          <div className="pointer-events-auto absolute right-3 top-12 z-10">
+            <EquipmentPanel />
+          </div>
+
+          {/* left: chat (collapsed by default) */}
+          <div className="pointer-events-auto absolute left-3 bottom-3 z-10">
+            <ChatPanel onSend={handleSend} busy={busy} />
+          </div>
+
+          {/* center-bottom: caption bar (above voice) */}
           <CaptionBar />
 
-          {/* bottom: voice button (primary) + command bar + collapsed chat */}
-          <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-end justify-between gap-4 px-4 pb-5">
-            {/* left: chat (collapsed by default — voice first) */}
-            <div className="pointer-events-auto">
-              <ChatPanel onSend={handleSend} busy={busy} />
-            </div>
-
-            {/* center: voice + commands */}
-            <div className="pointer-events-auto flex flex-col items-center gap-3">
-              <CommandBar onCommand={handleSend} />
-              <VoiceButton onTranscript={handleSend} />
-            </div>
-
-            {/* right: spacer to balance layout */}
-            <div className="w-[52px]" />
+          {/* center-bottom: voice + commands */}
+          <div className="pointer-events-auto absolute bottom-3 left-1/2 z-10 flex -translate-x-1/2 flex-col items-center gap-2">
+            <CommandBar onCommand={handleSend} />
+            <VoiceButton onTranscript={handleSend} />
           </div>
-        </div>
+        </>
       )}
     </main>
   );
