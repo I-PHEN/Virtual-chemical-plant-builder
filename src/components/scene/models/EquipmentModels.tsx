@@ -5,547 +5,931 @@ import * as THREE from "three";
 import type { EquipmentType } from "@/lib/plant/types";
 
 /**
- * Procedural 3D equipment models built entirely from Three.js primitives.
- * This avoids needing external GLB assets while still giving each equipment
- * type a recognisable silhouette. Colours come from the equipment library.
+ * Procedural 3D equipment models — each type has a genuinely distinct,
+ * professionally-recognisable silhouette built from Three.js primitives.
+ * No two equipment types share the same shape language.
  *
- * Each model is centred at the origin with its base roughly at y = 0.
- * The model file owns no state — colour & emphasis are passed in so the
- * same model can render in normal / highlighted / dimmed / selected states.
+ * Convention: model centred at origin, base near y = 0.
+ * Props control material state (normal / highlighted / dimmed).
  */
 
 interface ModelProps {
   color: string;
-  emphasized?: boolean; // highlighted
-  dimmed?: boolean; // hidden/ghosted
+  emphasized?: boolean;
+  dimmed?: boolean;
   selected?: boolean;
 }
 
-const dimFactor = 0.18;
-
 function useMaterials(color: string, emphasized?: boolean, dimmed?: boolean) {
   return useMemo(() => {
+    const c = new THREE.Color(color);
     const base = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(color),
-      metalness: 0.55,
-      roughness: 0.4,
-      transparent: dimmed,
-      opacity: dimmed ? dimFactor : 1,
-      emissive: new THREE.Color(color),
-      emissiveIntensity: emphasized ? 0.45 : 0.05,
+      color: c,
+      metalness: 0.72,
+      roughness: 0.32,
+      transparent: dimmed ?? false,
+      opacity: dimmed ? 0.16 : 1,
+      emissive: c,
+      emissiveIntensity: emphasized ? 0.5 : 0.04,
     });
-    const dark = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#1f2937"),
-      metalness: 0.7,
-      roughness: 0.4,
-      transparent: dimmed,
-      opacity: dimmed ? dimFactor : 1,
+    const steel = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#525659"),
+      metalness: 0.92,
+      roughness: 0.28,
+      transparent: dimmed ?? false,
+      opacity: dimmed ? 0.16 : 1,
+    });
+    const darkSteel = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#2a2d31"),
+      metalness: 0.88,
+      roughness: 0.35,
+      transparent: dimmed ?? false,
+      opacity: dimmed ? 0.16 : 1,
     });
     const accent = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(emphasized ? "#fde68a" : "#e5e7eb"),
-      metalness: 0.6,
-      roughness: 0.3,
-      transparent: dimmed,
-      opacity: dimmed ? dimFactor : 1,
-      emissive: new THREE.Color(emphasized ? "#fde68a" : "#000000"),
-      emissiveIntensity: emphasized ? 0.35 : 0,
+      color: new THREE.Color(emphasized ? "#fbbf24" : "#cbd5e1"),
+      metalness: 0.7,
+      roughness: 0.25,
+      transparent: dimmed ?? false,
+      opacity: dimmed ? 0.16 : 1,
+      emissive: new THREE.Color(emphasized ? "#fbbf24" : "#000000"),
+      emissiveIntensity: emphasized ? 0.45 : 0,
     });
-    return { base, dark, accent };
+    const glass = new THREE.MeshStandardMaterial({
+      color: c,
+      metalness: 0.1,
+      roughness: 0.08,
+      transparent: true,
+      opacity: dimmed ? 0.05 : 0.32,
+      emissive: c,
+      emissiveIntensity: emphasized ? 0.6 : 0.18,
+    });
+    const hazard = new THREE.MeshStandardMaterial({
+      color: new THREE.Color("#f59e0b"),
+      metalness: 0.4,
+      roughness: 0.5,
+      transparent: dimmed ?? false,
+      opacity: dimmed ? 0.16 : 1,
+      emissive: new THREE.Color("#f59e0b"),
+      emissiveIntensity: emphasized ? 0.3 : 0.05,
+    });
+    return { base, steel, darkSteel, accent, glass, hazard };
   }, [color, emphasized, dimmed]);
 }
 
-// ─────────────── Pump ───────────────
-function PumpModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
+// small reusable bolt
+function Bolts({ radius, y, count, material }: { radius: number; y: number; count: number; material: THREE.Material }) {
+  const arr = Array.from({ length: count });
   return (
     <group>
-      {/* volute casing */}
+      {arr.map((_, i) => {
+        const a = (i / count) * Math.PI * 2;
+        return (
+          <mesh key={i} material={material} position={[Math.cos(a) * radius, y, Math.sin(a) * radius]}>
+            <cylinderGeometry args={[0.025, 0.025, 0.05, 6]} />
+          </mesh>
+        );
+      })}
+    </group>
+  );
+}
+
+// ───────────────────────── PUMP ─────────────────────────
+// Distinctive snail-shell volute + top motor, very different from tanks
+function PumpModel({ color, emphasized, dimmed }: ModelProps) {
+  const { base, steel, darkSteel, accent, hazard } = useMaterials(color, emphasized, dimmed);
+  return (
+    <group>
+      {/* baseplate */}
+      <mesh material={darkSteel} position={[0, 0.04, 0]} castShadow receiveShadow>
+        <boxGeometry args={[2.0, 0.08, 1.2]} />
+      </mesh>
+      {/* bolt holes on baseplate */}
+      <Bolts radius={0.85} y={0.085} count={8} material={accent} />
+
+      {/* volute casing — the snail shell */}
       <mesh material={base} castShadow position={[0, 0.55, 0]}>
-        <cylinderGeometry args={[0.55, 0.55, 0.6, 24]} />
+        <torusGeometry args={[0.42, 0.22, 16, 32, Math.PI * 1.6]} />
       </mesh>
-      {/* suction nozzle (front) */}
-      <mesh material={dark} position={[0, 0.45, 0.7]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.18, 0.18, 0.4, 16]} />
+      {/* casing front cover (flatter disk) */}
+      <mesh material={steel} position={[0, 0.55, 0.22]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.45, 0.45, 0.06, 32]} />
       </mesh>
-      {/* discharge nozzle (top) */}
-      <mesh material={dark} position={[0, 1.1, 0]}>
-        <cylinderGeometry args={[0.16, 0.16, 0.4, 16]} />
+      {/* impeller hub (visible through cover) */}
+      <mesh material={accent} position={[0, 0.55, 0.27]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.06, 12]} />
       </mesh>
-      {/* impeller hub */}
-      <mesh material={accent} position={[0, 0.9, 0]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+
+      {/* suction nozzle — horizontal, front-facing */}
+      <mesh material={steel} position={[0, 0.5, 0.7]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.16, 0.18, 0.5, 20]} />
       </mesh>
-      {/* motor */}
-      <mesh material={dark} position={[0, 1.45, 0]}>
-        <cylinderGeometry args={[0.32, 0.32, 0.5, 24]} />
+      <mesh material={darkSteel} position={[0, 0.5, 0.95]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.22, 0.22, 0.06, 20]} />
       </mesh>
-      {/* motor fins */}
-      {Array.from({ length: 12 }).map((_, i) => (
-        <mesh key={i} material={dark} position={[0, 1.45, 0]} rotation={[0, (i / 12) * Math.PI * 2, 0]}>
-          <boxGeometry args={[0.66, 0.4, 0.04]} />
+
+      {/* discharge nozzle — vertical, up */}
+      <mesh material={steel} position={[0, 1.05, 0]}>
+        <cylinderGeometry args={[0.14, 0.16, 0.4, 20]} />
+      </mesh>
+      <mesh material={darkSteel} position={[0, 1.28, 0]}>
+        <cylinderGeometry args={[0.2, 0.2, 0.06, 20]} />
+      </mesh>
+
+      {/* bearing housing */}
+      <mesh material={steel} position={[0, 0.9, -0.15]}>
+        <cylinderGeometry args={[0.18, 0.2, 0.2, 20]} />
+      </mesh>
+
+      {/* motor — distinct cylindrical shape with cooling fins */}
+      <mesh material={darkSteel} castShadow position={[0, 1.55, -0.15]}>
+        <cylinderGeometry args={[0.34, 0.34, 0.7, 32]} />
+      </mesh>
+      {/* cooling fins — radial blades */}
+      {Array.from({ length: 28 }).map((_, i) => (
+        <mesh
+          key={i}
+          material={steel}
+          position={[0, 1.55, -0.15]}
+          rotation={[0, (i / 28) * Math.PI * 2, 0]}
+        >
+          <boxGeometry args={[0.72, 0.6, 0.015]} />
         </mesh>
       ))}
-      {/* baseplate */}
-      <mesh material={accent} position={[0, 0.05, 0]}>
-        <boxGeometry args={[1.6, 0.1, 1.0]} />
+      {/* motor end bell */}
+      <mesh material={darkSteel} position={[0, 1.95, -0.15]}>
+        <cylinderGeometry args={[0.36, 0.34, 0.1, 32]} />
+      </mesh>
+      {/* terminal box */}
+      <mesh material={accent} position={[0, 2.05, -0.15]}>
+        <boxGeometry args={[0.3, 0.18, 0.22]} />
+      </mesh>
+
+      {/* nameplate */}
+      <mesh material={hazard} position={[0, 0.55, 0.51]}>
+        <boxGeometry args={[0.15, 0.1, 0.01]} />
       </mesh>
     </group>
   );
 }
 
-// ─────────────── Tank / StorageTank ───────────────
+// ───────────────────────── TANK ─────────────────────────
 function TankModel({ color, emphasized, dimmed, large }: ModelProps & { large?: boolean }) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  const r = large ? 1.1 : 0.8;
-  const h = large ? 2.6 : 2.0;
+  const { base, steel, darkSteel, accent, glass } = useMaterials(color, emphasized, dimmed);
+  const r = large ? 1.25 : 0.85;
+  const h = large ? 2.8 : 2.0;
   return (
     <group>
+      {/* skirt / legs */}
+      <mesh material={darkSteel} position={[0, 0.15, 0]}>
+        <cylinderGeometry args={[r * 0.7, r * 0.8, 0.3, 24]} />
+      </mesh>
       {/* body */}
-      <mesh material={base} castShadow position={[0, h / 2 + 0.2, 0]}>
-        <cylinderGeometry args={[r, r, h, 32]} />
+      <mesh material={base} castShadow receiveShadow position={[0, h / 2 + 0.3, 0]}>
+        <cylinderGeometry args={[r, r, h, 48]} />
       </mesh>
       {/* dished top */}
-      <mesh material={base} position={[0, h + 0.2, 0]}>
-        <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
+      <mesh material={base} position={[0, h + 0.3, 0]}>
+        <sphereGeometry args={[r, 48, 24, 0, Math.PI * 2, 0, Math.PI / 2.4]} />
       </mesh>
-      {/* bottom */}
-      <mesh material={dark} position={[0, 0.2, 0]}>
-        <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
+      {/* dished bottom */}
+      <mesh material={steel} position={[0, 0.3, 0]}>
+        <sphereGeometry args={[r, 48, 24, 0, Math.PI * 2, Math.PI - Math.PI / 2.4, Math.PI / 2.4]} />
       </mesh>
-      {/* bands */}
-      <mesh material={accent} position={[0, h * 0.35 + 0.2, 0]}>
-        <torusGeometry args={[r + 0.01, 0.025, 8, 32]} />
+      {/* reinforcing bands */}
+      <mesh material={steel} position={[0, h * 0.3 + 0.3, 0]}>
+        <torusGeometry args={[r + 0.005, 0.03, 8, 48]} />
       </mesh>
-      <mesh material={accent} position={[0, h * 0.7 + 0.2, 0]}>
-        <torusGeometry args={[r + 0.01, 0.025, 8, 32]} />
+      <mesh material={steel} position={[0, h * 0.7 + 0.3, 0]}>
+        <torusGeometry args={[r + 0.005, 0.03, 8, 48]} />
       </mesh>
-      {/* inlet nozzle top */}
-      <mesh material={dark} position={[0, h + 0.45, 0]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.4, 12]} />
+      {/* liquid level gauge — vertical glass strip */}
+      <mesh material={glass} position={[r + 0.01, h * 0.5 + 0.3, 0.2]}>
+        <boxGeometry args={[0.06, h * 0.7, 0.04]} />
       </mesh>
-      {/* outlet nozzle side */}
-      <mesh material={dark} position={[r + 0.1, 0.45, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.3, 12]} />
+      {/* gauge protective rods */}
+      <mesh material={accent} position={[r + 0.02, h * 0.5 + 0.3, 0.18]}>
+        <boxGeometry args={[0.02, h * 0.75, 0.02]} />
       </mesh>
-      {/* ladder */}
-      <mesh material={dark} position={[r + 0.1, h / 2 + 0.2, 0]}>
-        <boxGeometry args={[0.04, h * 0.85, 0.04]} />
+      <mesh material={accent} position={[r + 0.02, h * 0.5 + 0.3, 0.22]}>
+        <boxGeometry args={[0.02, h * 0.75, 0.02]} />
       </mesh>
-      <mesh material={dark} position={[r + 0.1, h * 0.3 + 0.2, 0.1]}>
-        <boxGeometry args={[0.04, 0.04, 0.2]} />
+      {/* top vent */}
+      <mesh material={darkSteel} position={[0, h + 0.55, 0]}>
+        <cylinderGeometry args={[0.12, 0.14, 0.3, 16]} />
       </mesh>
-      <mesh material={dark} position={[r + 0.1, h * 0.55 + 0.2, 0.1]}>
-        <boxGeometry args={[0.04, 0.04, 0.2]} />
+      {/* inlet nozzle (top, angled) */}
+      <mesh material={steel} position={[r * 0.6, h + 0.4, 0]} rotation={[0, 0, -Math.PI / 4]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.4, 16]} />
       </mesh>
-      <mesh material={dark} position={[r + 0.1, h * 0.8 + 0.2, 0.1]}>
-        <boxGeometry args={[0.04, 0.04, 0.2]} />
+      {/* outlet nozzle (bottom side) */}
+      <mesh material={steel} position={[r + 0.15, 0.45, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
       </mesh>
+      <mesh material={darkSteel} position={[r + 0.22, 0.45, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.05, 16]} />
+      </mesh>
+      {/* external ladder */}
+      <mesh material={accent} position={[r + 0.15, h * 0.5 + 0.3, 0]}>
+        <boxGeometry args={[0.04, h * 0.9, 0.04]} />
+      </mesh>
+      {Array.from({ length: 6 }).map((_, i) => (
+        <mesh key={i} material={accent} position={[r + 0.15, h * 0.18 + i * h * 0.15 + 0.3, 0.1]}>
+          <boxGeometry args={[0.04, 0.04, 0.18]} />
+        </mesh>
+      ))}
     </group>
   );
 }
 
-// ─────────────── Reactor ───────────────
+// ───────────────────────── REACTOR ─────────────────────────
+// Tall vessel with visible catalyst bed (glass cutaway), external jacket
 function ReactorModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  const h = 2.4;
-  const r = 0.7;
+  const { base, steel, darkSteel, accent, glass, hazard } = useMaterials(color, emphasized, dimmed);
+  const h = 2.6;
+  const r = 0.72;
   return (
     <group>
-      {/* vessel */}
-      <mesh material={base} castShadow position={[0, h / 2 + 0.2, 0]}>
-        <cylinderGeometry args={[r, r, h, 24]} />
+      {/* support skirt */}
+      <mesh material={darkSteel} position={[0, 0.2, 0]}>
+        <cylinderGeometry args={[r * 0.85, r * 0.95, 0.4, 24]} />
       </mesh>
+      {/* skirt access hole */}
+      <mesh material={darkSteel} position={[0, 0.2, r * 0.7]}>
+        <boxGeometry args={[0.3, 0.25, 0.05]} />
+      </mesh>
+      {/* external cooling jacket (slightly larger, glass-tinted) */}
+      <mesh material={glass} position={[0, h / 2 + 0.4, 0]}>
+        <cylinderGeometry args={[r + 0.06, r + 0.06, h, 36]} />
+      </mesh>
+      {/* inner vessel */}
+      <mesh material={base} castShadow position={[0, h / 2 + 0.4, 0]}>
+        <cylinderGeometry args={[r, r, h, 36]} />
+      </mesh>
+      {/* catalyst bed — visible internal grid pattern via stacked torus rings */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <mesh
+          key={i}
+          material={accent}
+          position={[0, h * 0.25 + i * h * 0.12 + 0.4, 0]}
+        >
+          <torusGeometry args={[r - 0.05, 0.025, 6, 32]} />
+        </mesh>
+      ))}
       {/* top head */}
-      <mesh material={base} position={[0, h + 0.2, 0]}>
-        <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
+      <mesh material={base} position={[0, h + 0.4, 0]}>
+        <sphereGeometry args={[r, 36, 18, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
       </mesh>
       {/* bottom head */}
-      <mesh material={dark} position={[0, 0.2, 0]}>
-        <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
+      <mesh material={steel} position={[0, 0.4, 0]}>
+        <sphereGeometry args={[r, 36, 18, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
       </mesh>
-      {/* catalyst bed highlight (interior ring) */}
-      <mesh material={accent} position={[0, h * 0.5 + 0.2, 0]}>
-        <torusGeometry args={[r - 0.04, 0.04, 8, 32]} />
+      {/* top flange */}
+      <mesh material={steel} position={[0, h + 0.55, 0]}>
+        <cylinderGeometry args={[r + 0.12, r + 0.12, 0.12, 36]} />
       </mesh>
-      <mesh material={accent} position={[0, h * 0.3 + 0.2, 0]}>
-        <torusGeometry args={[r - 0.04, 0.04, 8, 32]} />
+      <Bolts radius={r + 0.1} y={h + 0.55} count={20} material={accent} />
+      {/* inlet nozzle */}
+      <mesh material={darkSteel} position={[0, h + 0.75, 0]}>
+        <cylinderGeometry args={[0.15, 0.15, 0.3, 16]} />
       </mesh>
-      {/* inlet (top) */}
-      <mesh material={dark} position={[0, h + 0.55, 0]}>
-        <cylinderGeometry args={[0.14, 0.14, 0.4, 12]} />
+      {/* outlet nozzle (bottom) */}
+      <mesh material={darkSteel} position={[0, 0.2, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.4, 16]} />
       </mesh>
-      {/* outlet (bottom side) */}
-      <mesh material={dark} position={[r + 0.1, 0.45, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.14, 0.14, 0.3, 12]} />
-      </mesh>
-      {/* temperature jacket ports */}
-      <mesh material={accent} position={[r - 0.05, h * 0.7 + 0.2, 0.3]}>
-        <boxGeometry args={[0.18, 0.06, 0.06]} />
-      </mesh>
-      <mesh material={accent} position={[r - 0.05, h * 0.4 + 0.2, 0.3]}>
-        <boxGeometry args={[0.18, 0.06, 0.06]} />
-      </mesh>
-      {/* skirt support */}
-      <mesh material={dark} position={[0, 0.05, 0]}>
-        <cylinderGeometry args={[r * 0.85, r * 0.95, 0.1, 24]} />
+      {/* temperature probes (side, angled) */}
+      {[-0.3, 0.3].map((x, i) => (
+        <group key={i}>
+          <mesh material={accent} position={[x, h * 0.5 + 0.4, r + 0.1]} rotation={[Math.PI / 2.5, 0, 0]}>
+            <cylinderGeometry args={[0.025, 0.025, 0.4, 8]} />
+          </mesh>
+          <mesh material={hazard} position={[x, h * 0.5 + 0.55, r + 0.25]}>
+            <boxGeometry args={[0.08, 0.12, 0.06]} />
+          </mesh>
+        </group>
+      ))}
+      {/* pressure gauge on top */}
+      <mesh material={accent} position={[r * 0.6, h + 0.5, r * 0.4]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.08, 16]} rotation={[Math.PI / 2, 0, 0]} />
       </mesh>
     </group>
   );
 }
 
-// ─────────────── HeatExchanger ───────────────
+// ───────────────────────── HEAT EXCHANGER ─────────────────────────
+// Long horizontal shell with tube bundle ends visible, saddle supports
 function HeatExchangerModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  const len = 2.2;
-  const r = 0.35;
+  const { base, steel, darkSteel, accent } = useMaterials(color, emphasized, dimmed);
+  const len = 2.4;
+  const r = 0.38;
   return (
-    <group rotation={[0, 0, Math.PI / 2]} position={[0, 0.8, 0]}>
+    <group rotation={[0, 0, Math.PI / 2]} position={[0, 1.0, 0]}>
       {/* shell */}
+      <mesh material={base} castShadow>
+        <cylinderGeometry args={[r, r, len, 32]} />
+      </mesh>
+      {/* channel end covers (flanged) */}
+      <mesh material={darkSteel} position={[len / 2 + 0.05, 0, 0]}>
+        <cylinderGeometry args={[r * 1.15, r * 1.15, 0.18, 32]} />
+      </mesh>
+      <mesh material={darkSteel} position={[-len / 2 - 0.05, 0, 0]}>
+        <cylinderGeometry args={[r * 1.15, r * 1.15, 0.18, 32]} />
+      </mesh>
+      {/* tube bundle faceplates (perforated look) */}
+      <mesh material={steel} position={[len / 2 - 0.05, 0, 0]}>
+        <cylinderGeometry args={[r * 0.95, r * 0.95, 0.04, 32]} />
+      </mesh>
+      <mesh material={steel} position={[-len / 2 + 0.05, 0, 0]}>
+        <cylinderGeometry args={[r * 0.95, r * 0.95, 0.04, 32]} />
+      </mesh>
+      {/* tube ends (grid of small circles) */}
+      {Array.from({ length: 4 }).map((_, ring) =>
+        Array.from({ length: 6 }).map((_, i) => {
+          const a = (i / 6) * Math.PI * 2;
+          const rr = 0.08 + ring * 0.07;
+          return (
+            <group key={`${ring}-${i}`}>
+              <mesh
+                material={accent}
+                position={[len / 2 - 0.02, Math.cos(a) * rr, Math.sin(a) * rr]}
+              >
+                <cylinderGeometry args={[0.018, 0.018, 0.06, 8]} />
+              </mesh>
+              <mesh
+                material={accent}
+                position={[-len / 2 + 0.02, Math.cos(a) * rr, Math.sin(a) * rr]}
+              >
+                <cylinderGeometry args={[0.018, 0.018, 0.06, 8]} />
+              </mesh>
+            </group>
+          );
+        })
+      )}
+      {/* baffles visible as rings on shell */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <mesh
+          key={i}
+          material={steel}
+          position={[-len / 2 + 0.3 + (i * (len - 0.6)) / 4, 0, 0]}
+        >
+          <torusGeometry args={[r - 0.02, 0.015, 6, 24]} />
+        </mesh>
+      ))}
+      {/* shell-side nozzles (top & bottom) */}
+      <mesh material={darkSteel} position={[len * 0.25, r + 0.12, 0]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+      </mesh>
+      <mesh material={darkSteel} position={[-len * 0.25, -r - 0.12, 0]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+      </mesh>
+      {/* tube-side nozzles (ends) */}
+      <mesh material={darkSteel} position={[len / 2 + 0.2, 0, r + 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.25, 16]} />
+      </mesh>
+      <mesh material={darkSteel} position={[-len / 2 - 0.2, 0, -r - 0.05]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.25, 16]} />
+      </mesh>
+      {/* saddle supports (cradles) */}
+      <mesh material={accent} position={[len * 0.3, -r - 0.25, 0]}>
+        <boxGeometry args={[0.12, 0.5, r * 1.8]} />
+      </mesh>
+      <mesh material={accent} position={[-len * 0.3, -r - 0.25, 0]}>
+        <boxGeometry args={[0.12, 0.5, r * 1.8]} />
+      </mesh>
+    </group>
+  );
+}
+
+// ───────────────────────── COOLER ─────────────────────────
+// Finned-tube cooler — looks like a big radiator, very different from shell-and-tube HX
+function CoolerModel({ color, emphasized, dimmed }: ModelProps) {
+  const { base, steel, darkSteel, accent } = useMaterials(color, emphasized, dimmed);
+  const len = 1.9;
+  const r = 0.32;
+  return (
+    <group rotation={[0, 0, Math.PI / 2]} position={[0, 0.9, 0]}>
+      {/* core tube */}
       <mesh material={base} castShadow>
         <cylinderGeometry args={[r, r, len, 24]} />
       </mesh>
-      {/* channel covers */}
-      <mesh material={dark} position={[len / 2, 0, 0]}>
-        <cylinderGeometry args={[r * 1.1, r * 1.1, 0.15, 24]} />
+      {/* end caps */}
+      <mesh material={darkSteel} position={[len / 2 + 0.05, 0, 0]}>
+        <cylinderGeometry args={[r * 1.1, r * 1.1, 0.14, 24]} />
       </mesh>
-      <mesh material={dark} position={[-len / 2, 0, 0]}>
-        <cylinderGeometry args={[r * 1.1, r * 1.1, 0.15, 24]} />
+      <mesh material={darkSteel} position={[-len / 2 - 0.05, 0, 0]}>
+        <cylinderGeometry args={[r * 1.1, r * 1.1, 0.14, 24]} />
       </mesh>
-      {/* tubes hint (bands around the shell) */}
-      {Array.from({ length: 5 }).map((_, i) => (
-        <mesh key={i} material={accent} position={[-len / 2 + 0.4 + (i * len) / 6, 0, 0]}>
-          <torusGeometry args={[r + 0.01, 0.018, 6, 24]} />
+      {/* cooling fins — dense radial disks along the tube */}
+      {Array.from({ length: 18 }).map((_, i) => (
+        <mesh
+          key={i}
+          material={accent}
+          position={[-len / 2 + 0.15 + (i * (len - 0.3)) / 17, 0, 0]}
+        >
+          <cylinderGeometry args={[r + 0.12, r + 0.12, 0.015, 24]} />
         </mesh>
       ))}
-      {/* nozzles */}
-      <mesh material={dark} position={[0, r + 0.1, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.3, 12]} />
+      {/* inlet/outlet nozzles */}
+      <mesh material={darkSteel} position={[len / 2 + 0.2, 0, 0]}>
+        <cylinderGeometry args={[0.11, 0.11, 0.25, 16]} />
       </mesh>
-      <mesh material={dark} position={[0, -r - 0.1, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.3, 12]} />
+      <mesh material={darkSteel} position={[-len / 2 - 0.2, 0, 0]}>
+        <cylinderGeometry args={[0.11, 0.11, 0.25, 16]} />
       </mesh>
-      <mesh material={dark} position={[len / 2 - 0.3, 0, r + 0.1]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.3, 12]} />
+      {/* cooling water connections (top/bottom) */}
+      <mesh material={steel} position={[0, r + 0.1, 0]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.2, 12]} />
       </mesh>
-      <mesh material={dark} position={[-len / 2 + 0.3, 0, -r - 0.1]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.3, 12]} />
+      <mesh material={steel} position={[0, -r - 0.1, 0]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.2, 12]} />
       </mesh>
-      {/* saddle supports */}
-      <mesh material={accent} position={[len * 0.25, -r - 0.2, 0]}>
-        <boxGeometry args={[0.1, 0.4, r * 1.6]} />
+      {/* cradle supports */}
+      <mesh material={accent} position={[len * 0.3, -r - 0.3, 0]}>
+        <boxGeometry args={[0.1, 0.5, r * 1.8]} />
       </mesh>
-      <mesh material={accent} position={[-len * 0.25, -r - 0.2, 0]}>
-        <boxGeometry args={[0.1, 0.4, r * 1.6]} />
+      <mesh material={accent} position={[-len * 0.3, -r - 0.3, 0]}>
+        <boxGeometry args={[0.1, 0.5, r * 1.8]} />
       </mesh>
     </group>
   );
 }
 
-// ─────────────── Cooler (like a smaller HX with cooling-water feel) ───────────────
-function CoolerModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  const len = 1.8;
-  const r = 0.3;
-  return (
-    <group rotation={[0, 0, Math.PI / 2]} position={[0, 0.7, 0]}>
-      <mesh material={base} castShadow>
-        <cylinderGeometry args={[r, r, len, 20]} />
-      </mesh>
-      <mesh material={dark} position={[len / 2, 0, 0]}>
-        <cylinderGeometry args={[r * 1.1, r * 1.1, 0.12, 20]} />
-      </mesh>
-      <mesh material={dark} position={[-len / 2, 0, 0]}>
-        <cylinderGeometry args={[r * 1.1, r * 1.1, 0.12, 20]} />
-      </mesh>
-      {/* cooling fins */}
-      {Array.from({ length: 8 }).map((_, i) => (
-        <mesh key={i} material={accent} position={[-len / 2 + 0.25 + (i * len) / 9, 0, 0]}>
-          <torusGeometry args={[r + 0.02, 0.015, 6, 20]} />
-        </mesh>
-      ))}
-      <mesh material={dark} position={[0, r + 0.1, 0]}>
-        <cylinderGeometry args={[0.09, 0.09, 0.25, 12]} />
-      </mesh>
-      <mesh material={dark} position={[0, -r - 0.1, 0]}>
-        <cylinderGeometry args={[0.09, 0.09, 0.25, 12]} />
-      </mesh>
-      <mesh material={accent} position={[len * 0.3, -r - 0.25, 0]}>
-        <boxGeometry args={[0.1, 0.35, r * 1.4]} />
-      </mesh>
-      <mesh material={accent} position={[-len * 0.3, -r - 0.25, 0]}>
-        <boxGeometry args={[0.1, 0.35, r * 1.4]} />
-      </mesh>
-    </group>
-  );
-}
-
-// ─────────────── Compressor ───────────────
+// ───────────────────────── COMPRESSOR ─────────────────────────
+// Multi-stage horizontal barrel with big motor + coupling, very industrial
 function CompressorModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
+  const { base, steel, darkSteel, accent, hazard } = useMaterials(color, emphasized, dimmed);
   return (
     <group>
       {/* baseplate */}
-      <mesh material={accent} position={[0, 0.05, 0]}>
-        <boxGeometry args={[2.4, 0.1, 1.0]} />
+      <mesh material={darkSteel} position={[0, 0.04, 0]} castShadow receiveShadow>
+        <boxGeometry args={[3.2, 0.08, 1.3]} />
       </mesh>
-      {/* compressor body (horizontally laid barrel) */}
-      <mesh material={base} castShadow position={[0.2, 0.75, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.45, 0.45, 1.4, 24]} />
+      <Bolts radius={1.4} y={0.085} count={10} material={accent} />
+
+      {/* compressor body — 3-stage barrel */}
+      <mesh material={base} castShadow position={[0.4, 0.85, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.5, 0.5, 1.6, 32]} />
       </mesh>
-      {/* stage dividers */}
-      <mesh material={dark} position={[0.2 - 0.4, 0.75, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.46, 0.46, 0.04, 24]} />
+      {/* stage dividers (flanges between stages) */}
+      {[-0.3, 0.3].map((x, i) => (
+        <mesh key={i} material={darkSteel} position={[0.4 + x, 0.85, 0]} rotation={[0, 0, Math.PI / 2]}>
+          <cylinderGeometry args={[0.55, 0.55, 0.08, 32]} />
+        </mesh>
+      ))}
+      {/* end covers */}
+      <mesh material={darkSteel} position={[0.4 + 0.85, 0.85, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.56, 0.56, 0.1, 32]} />
       </mesh>
-      <mesh material={dark} position={[0.2 + 0.4, 0.75, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.46, 0.46, 0.04, 24]} />
+      <mesh material={darkSteel} position={[0.4 - 0.85, 0.85, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.56, 0.56, 0.1, 32]} />
       </mesh>
-      {/* suction (left) */}
-      <mesh material={dark} position={[-0.7, 0.75, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.16, 0.16, 0.4, 16]} />
+
+      {/* suction nozzle (left, large) */}
+      <mesh material={steel} position={[-0.6, 1.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.22, 0.22, 0.4, 20]} />
       </mesh>
-      {/* discharge (right) */}
-      <mesh material={dark} position={[1.1, 0.75, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.16, 0.16, 0.4, 16]} />
+      {/* discharge nozzle (right, large) */}
+      <mesh material={steel} position={[1.4, 1.05, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.2, 0.2, 0.4, 20]} />
       </mesh>
-      {/* motor */}
-      <mesh material={dark} position={[-0.9, 0.6, 0]}>
-        <cylinderGeometry args={[0.3, 0.3, 0.7, 24]} rotation={[0, 0, Math.PI / 2]} />
+
+      {/* coupling between motor & compressor */}
+      <mesh material={accent} position={[-0.55, 0.85, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.18, 16]} />
       </mesh>
-      <mesh material={dark} position={[-0.9, 0.6, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.3, 0.3, 0.7, 24]} />
+      {/* coupling guard */}
+      <mesh material={hazard} position={[-0.55, 0.7, 0]}>
+        <boxGeometry args={[0.25, 0.05, 0.45]} />
       </mesh>
-      {/* coupling */}
-      <mesh material={accent} position={[-0.45, 0.7, 0]}>
-        <boxGeometry args={[0.18, 0.18, 0.18]} />
+
+      {/* big electric motor */}
+      <mesh material={darkSteel} castShadow position={[-1.2, 0.7, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.42, 0.42, 1.0, 32]} />
       </mesh>
-      {/* control panel */}
-      <mesh material={accent} position={[0.5, 1.2, 0.55]}>
-        <boxGeometry args={[0.4, 0.4, 0.1]} />
+      {/* motor cooling fins */}
+      {Array.from({ length: 32 }).map((_, i) => (
+        <mesh
+          key={i}
+          material={steel}
+          position={[-1.2, 0.7, 0]}
+          rotation={[0, 0, (i / 32) * Math.PI * 2]}
+        >
+          <boxGeometry args={[0.88, 0.9, 0.012]} />
+        </mesh>
+      ))}
+      {/* motor terminal box */}
+      <mesh material={accent} position={[-1.2, 1.2, 0]}>
+        <boxGeometry args={[0.4, 0.22, 0.3]} />
+      </mesh>
+
+      {/* control panel (labeled box) */}
+      <mesh material={accent} position={[0.8, 1.55, 0.55]}>
+        <boxGeometry args={[0.5, 0.5, 0.12]} />
+      </mesh>
+      <mesh material={hazard} position={[0.8, 1.55, 0.62]}>
+        <boxGeometry args={[0.35, 0.18, 0.01]} />
+      </mesh>
+      {/* pressure gauges */}
+      <mesh material={hazard} position={[0.0, 1.3, 0.5]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.06, 16]} rotation={[Math.PI / 2, 0, 0]} />
+      </mesh>
+      <mesh material={hazard} position={[0.8, 1.3, 0.5]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.06, 16]} rotation={[Math.PI / 2, 0, 0]} />
+      </mesh>
+
+      {/* piping on top — interstage pipe */}
+      <mesh material={steel} position={[0.4, 1.5, 0]}>
+        <boxGeometry args={[1.2, 0.08, 0.08]} />
+      </mesh>
+      <mesh material={steel} position={[0.4, 1.5, 0]}>
+        <boxGeometry args={[0.08, 0.4, 0.08]} />
       </mesh>
     </group>
   );
 }
 
-// ─────────────── Column ───────────────
+// ───────────────────────── COLUMN ─────────────────────────
+// Very tall slender vessel with visible trays, overhead pipework, reboiler connect
 function ColumnModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  const h = 3.2;
-  const r = 0.55;
+  const { base, steel, darkSteel, accent, glass } = useMaterials(color, emphasized, dimmed);
+  const h = 3.6;
+  const r = 0.58;
   return (
     <group>
-      {/* vessel */}
-      <mesh material={base} castShadow position={[0, h / 2 + 0.2, 0]}>
-        <cylinderGeometry args={[r, r, h, 24]} />
+      {/* support skirt */}
+      <mesh material={darkSteel} position={[0, 0.25, 0]}>
+        <cylinderGeometry args={[r * 0.82, r * 0.95, 0.5, 24]} />
       </mesh>
+      {/* vessel body */}
+      <mesh material={base} castShadow receiveShadow position={[0, h / 2 + 0.5, 0]}>
+        <cylinderGeometry args={[r, r, h, 36]} />
+      </mesh>
+      {/* tray rings (visible external bands marking each tray) */}
+      {Array.from({ length: 9 }).map((_, i) => (
+        <mesh key={i} material={accent} position={[0, 0.8 + i * (h - 0.6) / 8, 0]}>
+          <torusGeometry args={[r + 0.008, 0.025, 6, 36]} />
+        </mesh>
+      ))}
+      {/* internal downcomer hints (glass strips inside) */}
+      {Array.from({ length: 4 }).map((_, i) => (
+        <mesh key={i} material={glass} position={[r * 0.5, 1.2 + i * 0.7, 0]}>
+          <boxGeometry args={[0.04, 0.4, r * 1.2]} />
+        </mesh>
+      ))}
       {/* top head */}
-      <mesh material={base} position={[0, h + 0.2, 0]}>
-        <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
+      <mesh material={base} position={[0, h + 0.5, 0]}>
+        <sphereGeometry args={[r, 36, 18, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
       </mesh>
       {/* bottom head */}
-      <mesh material={dark} position={[0, 0.2, 0]}>
-        <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
+      <mesh material={steel} position={[0, 0.5, 0]}>
+        <sphereGeometry args={[r, 36, 18, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
       </mesh>
-      {/* tray lines */}
-      {Array.from({ length: 7 }).map((_, i) => (
-        <mesh key={i} material={accent} position={[0, 0.6 + (i * (h - 0.6)) / 6, 0]}>
-          <torusGeometry args={[r + 0.005, 0.022, 6, 24]} />
-        </mesh>
-      ))}
+      {/* top flange */}
+      <mesh material={steel} position={[0, h + 0.65, 0]}>
+        <cylinderGeometry args={[r + 0.1, r + 0.1, 0.1, 36]} />
+      </mesh>
+      <Bolts radius={r + 0.08} y={h + 0.65} count={20} material={accent} />
       {/* overhead vapour outlet */}
-      <mesh material={dark} position={[0, h + 0.5, 0]}>
-        <cylinderGeometry args={[0.16, 0.16, 0.4, 12]} />
+      <mesh material={darkSteel} position={[0, h + 0.85, 0]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.3, 20]} />
       </mesh>
-      {/* reflux inlet */}
-      <mesh material={dark} position={[0.35, h + 0.1, 0]} rotation={[0, 0, Math.PI / 2.4]}>
-        <cylinderGeometry args={[0.1, 0.1, 0.5, 12]} />
+      {/* reflux inlet (angled) */}
+      <mesh material={darkSteel} position={[r * 0.6, h + 0.55, 0]} rotation={[0, 0, -Math.PI / 4]}>
+        <cylinderGeometry args={[0.1, 0.1, 0.4, 16]} />
       </mesh>
-      {/* feed nozzle */}
-      <mesh material={dark} position={[-r - 0.12, h * 0.5 + 0.2, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.13, 0.13, 0.4, 12]} />
+      {/* feed nozzle (mid) */}
+      <mesh material={darkSteel} position={[-r - 0.15, h * 0.5 + 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.3, 16]} />
+      </mesh>
+      <mesh material={darkSteel} position={[-r - 0.22, h * 0.5 + 0.5, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.18, 0.18, 0.05, 16]} />
       </mesh>
       {/* bottoms outlet */}
-      <mesh material={dark} position={[0, 0.05, r + 0.1]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.13, 0.13, 0.4, 12]} />
+      <mesh material={darkSteel} position={[0, 0.3, r + 0.1]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.3, 16]} />
+      </mesh>
+      {/* external platform (mid) */}
+      <mesh material={accent} position={[r + 0.4, h * 0.5 + 0.5, 0]}>
+        <boxGeometry args={[0.8, 0.04, 1.0]} />
+      </mesh>
+      <mesh material={accent} position={[r + 0.4, h * 0.5 + 0.3, 0.45]}>
+        <boxGeometry args={[0.04, 0.4, 0.04]} />
+      </mesh>
+      <mesh material={accent} position={[r + 0.4, h * 0.5 + 0.3, -0.45]}>
+        <boxGeometry args={[0.04, 0.4, 0.04]} />
       </mesh>
       {/* access ladder */}
-      <mesh material={dark} position={[r + 0.12, h / 2 + 0.2, 0]}>
-        <boxGeometry args={[0.04, h * 0.85, 0.04]} />
+      <mesh material={accent} position={[r + 0.18, h * 0.5 + 0.5, 0]}>
+        <boxGeometry args={[0.04, h * 0.9, 0.04]} />
       </mesh>
-      {/* platform */}
-      <mesh material={accent} position={[r + 0.4, h * 0.7 + 0.2, 0]}>
-        <boxGeometry args={[0.7, 0.04, 0.8]} />
-      </mesh>
-    </group>
-  );
-}
-
-// ─────────────── Separator ───────────────
-function SeparatorModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  const h = 2.0;
-  const r = 0.55;
-  return (
-    <group>
-      <mesh material={base} castShadow position={[0, h / 2 + 0.2, 0]}>
-        <cylinderGeometry args={[r, r, h, 24]} />
-      </mesh>
-      <mesh material={base} position={[0, h + 0.2, 0]}>
-        <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
-      </mesh>
-      <mesh material={dark} position={[0, 0.2, 0]}>
-        <sphereGeometry args={[r, 24, 12, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
-      </mesh>
-      {/* demister line */}
-      <mesh material={accent} position={[0, h * 0.8 + 0.2, 0]}>
-        <torusGeometry args={[r - 0.02, 0.03, 6, 24]} />
-      </mesh>
-      {/* gas outlet top */}
-      <mesh material={dark} position={[0, h + 0.5, 0]}>
-        <cylinderGeometry args={[0.15, 0.15, 0.4, 12]} />
-      </mesh>
-      {/* two-phase inlet (tangential) */}
-      <mesh material={dark} position={[r + 0.05, h * 0.7 + 0.2, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.13, 0.13, 0.4, 12]} />
-      </mesh>
-      {/* liquid outlet bottom */}
-      <mesh material={dark} position={[0, 0.1, r + 0.05]} rotation={[Math.PI / 2, 0, 0]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.4, 12]} />
-      </mesh>
-      {/* level gauge */}
-      <mesh material={accent} position={[r + 0.1, h * 0.4 + 0.2, 0.25]}>
-        <boxGeometry args={[0.05, h * 0.5, 0.05]} />
-      </mesh>
-    </group>
-  );
-}
-
-// ─────────────── Valve ───────────────
-function ValveModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  return (
-    <group>
-      {/* body */}
-      <mesh material={base} castShadow position={[0, 0.45, 0]}>
-        <boxGeometry args={[0.55, 0.35, 0.55]} />
-      </mesh>
-      {/* flanges */}
-      <mesh material={dark} position={[0.45, 0.45, 0]}>
-        <cylinderGeometry args={[0.22, 0.22, 0.08, 16]} rotation={[0, 0, Math.PI / 2]} />
-      </mesh>
-      <mesh material={dark} position={[-0.45, 0.45, 0]}>
-        <cylinderGeometry args={[0.22, 0.22, 0.08, 16]} rotation={[0, 0, Math.PI / 2]} />
-      </mesh>
-      {/* bonnet */}
-      <mesh material={dark} position={[0, 0.75, 0]}>
-        <cylinderGeometry args={[0.12, 0.16, 0.25, 16]} />
-      </mesh>
-      {/* stem */}
-      <mesh material={accent} position={[0, 0.95, 0]}>
-        <cylinderGeometry args={[0.04, 0.04, 0.3, 12]} />
-      </mesh>
-      {/* handwheel */}
-      <mesh material={accent} position={[0, 1.12, 0]} rotation={[Math.PI / 2, 0, 0]}>
-        <torusGeometry args={[0.22, 0.025, 8, 24]} />
-      </mesh>
-      <mesh material={accent} position={[0, 1.12, 0]}>
-        <boxGeometry args={[0.44, 0.03, 0.04]} />
-      </mesh>
-      <mesh material={accent} position={[0, 1.12, 0]}>
-        <boxGeometry args={[0.04, 0.03, 0.44]} />
-      </mesh>
-    </group>
-  );
-}
-
-// ─────────────── Heater (fired) ───────────────
-function HeaterModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  return (
-    <group>
-      {/* firebox */}
-      <mesh material={base} castShadow position={[0, 1.0, 0]}>
-        <boxGeometry args={[1.4, 2.0, 1.4]} />
-      </mesh>
-      {/* refractory inner glow */}
-      <mesh material={accent} position={[0, 0.8, 0]}>
-        <boxGeometry args={[1.1, 1.6, 1.1]} />
-      </mesh>
-      {/* burner front */}
-      <mesh material={dark} position={[0, 0.25, 0.72]}>
-        <cylinderGeometry args={[0.2, 0.25, 0.2, 16]} rotation={[Math.PI / 2, 0, 0]} />
-      </mesh>
-      {/* stack */}
-      <mesh material={dark} position={[0, 2.8, 0]}>
-        <cylinderGeometry args={[0.3, 0.35, 1.6, 16]} />
-      </mesh>
-      {/* tube coil hint */}
-      <mesh material={accent} position={[0.55, 1.0, 0]}>
-        <torusGeometry args={[0.18, 0.04, 8, 16, Math.PI]} rotation={[0, Math.PI / 2, 0]} />
-      </mesh>
-      <mesh material={accent} position={[-0.55, 1.0, 0]}>
-        <torusGeometry args={[0.18, 0.04, 8, 16, Math.PI]} rotation={[0, -Math.PI / 2, 0]} />
-      </mesh>
-    </group>
-  );
-}
-
-// ─────────────── Filter ───────────────
-function FilterModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
-  return (
-    <group>
-      <mesh material={base} castShadow position={[0, 0.8, 0]}>
-        <cylinderGeometry args={[0.55, 0.55, 1.5, 24]} />
-      </mesh>
-      <mesh material={dark} position={[0, 1.65, 0]}>
-        <cylinderGeometry args={[0.6, 0.6, 0.15, 24]} />
-      </mesh>
-      <mesh material={dark} position={[0, 0.05, 0]}>
-        <cylinderGeometry args={[0.6, 0.6, 0.15, 24]} />
-      </mesh>
-      <mesh material={dark} position={[0.6, 0.8, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.3, 12]} />
-      </mesh>
-      <mesh material={dark} position={[-0.6, 0.8, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.12, 0.12, 0.3, 12]} />
-      </mesh>
-      {/* cartridge lines */}
-      {Array.from({ length: 6 }).map((_, i) => (
-        <mesh key={i} material={accent} position={[0, 0.8, 0]} rotation={[0, (i / 6) * Math.PI * 2, 0]}>
-          <boxGeometry args={[0.04, 1.2, 0.04]} />
+      {Array.from({ length: 9 }).map((_, i) => (
+        <mesh key={i} material={accent} position={[r + 0.18, 0.8 + i * 0.35, 0.1]}>
+          <boxGeometry args={[0.04, 0.04, 0.18]} />
         </mesh>
       ))}
     </group>
   );
 }
 
-// ─────────────── Motor ───────────────
-function MotorModel({ color, emphasized, dimmed }: ModelProps) {
-  const { base, dark, accent } = useMaterials(color, emphasized, dimmed);
+// ───────────────────────── SEPARATOR ─────────────────────────
+// Vertical vessel with tangential inlet (swirl), demister pad, level gauge
+function SeparatorModel({ color, emphasized, dimmed }: ModelProps) {
+  const { base, steel, darkSteel, accent, glass } = useMaterials(color, emphasized, dimmed);
+  const h = 2.2;
+  const r = 0.58;
   return (
     <group>
-      <mesh material={accent} position={[0, 0.05, 0]}>
-        <boxGeometry args={[1.4, 0.1, 0.9]} />
+      {/* support legs (3 angled legs) */}
+      {[0, 1, 2].map((i) => {
+        const a = (i / 3) * Math.PI * 2;
+        return (
+          <mesh
+            key={i}
+            material={darkSteel}
+            position={[Math.cos(a) * r * 0.7, 0.3, Math.sin(a) * r * 0.7]}
+            rotation={[Math.sin(a) * 0.25, 0, -Math.cos(a) * 0.25]}
+          >
+            <cylinderGeometry args={[0.05, 0.05, 0.7, 8]} />
+          </mesh>
+        );
+      })}
+      {/* vessel */}
+      <mesh material={base} castShadow position={[0, h / 2 + 0.5, 0]}>
+        <cylinderGeometry args={[r, r, h, 32]} />
       </mesh>
-      <mesh material={base} castShadow position={[0, 0.55, 0]}>
-        <cylinderGeometry args={[0.4, 0.4, 0.9, 24]} rotation={[0, 0, Math.PI / 2]} />
+      {/* demister pad (internal, glass-tinted) */}
+      <mesh material={glass} position={[0, h * 0.85 + 0.5, 0]}>
+        <cylinderGeometry args={[r - 0.03, r - 0.03, 0.12, 32]} />
       </mesh>
-      <mesh material={base} position={[0, 0.55, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.4, 0.4, 0.9, 24]} />
+      {/* demister support ring */}
+      <mesh material={accent} position={[0, h * 0.85 + 0.4, 0]}>
+        <torusGeometry args={[r - 0.02, 0.02, 6, 32]} />
       </mesh>
-      {/* cooling fins */}
-      {Array.from({ length: 14 }).map((_, i) => (
-        <mesh key={i} material={dark} position={[0, 0.55, 0]} rotation={[0, (i / 14) * Math.PI * 2, 0]}>
-          <boxGeometry args={[0.85, 0.36, 0.02]} />
+      {/* top head */}
+      <mesh material={base} position={[0, h + 0.5, 0]}>
+        <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
+      </mesh>
+      {/* bottom head */}
+      <mesh material={steel} position={[0, 0.5, 0]}>
+        <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
+      </mesh>
+      {/* tangential inlet (swirl inducer) — angled nozzle */}
+      <mesh material={darkSteel} position={[r + 0.05, h * 0.7 + 0.5, 0]} rotation={[0, 0, Math.PI / 2.2]}>
+        <cylinderGeometry args={[0.14, 0.14, 0.4, 20]} />
+      </mesh>
+      <mesh material={darkSteel} position={[r + 0.2, h * 0.7 + 0.5, 0]} rotation={[0, 0, Math.PI / 2.2]}>
+        <cylinderGeometry args={[0.19, 0.19, 0.06, 20]} />
+      </mesh>
+      {/* gas outlet top */}
+      <mesh material={darkSteel} position={[0, h + 0.75, 0]}>
+        <cylinderGeometry args={[0.16, 0.16, 0.3, 20]} />
+      </mesh>
+      {/* liquid outlet bottom */}
+      <mesh material={darkSteel} position={[0, 0.25, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+      </mesh>
+      {/* interface level gauge (vertical glass) */}
+      <mesh material={glass} position={[r + 0.02, h * 0.45 + 0.5, 0.25]}>
+        <boxGeometry args={[0.06, h * 0.6, 0.04]} />
+      </mesh>
+      <mesh material={accent} position={[r + 0.04, h * 0.45 + 0.5, 0.21]}>
+        <boxGeometry args={[0.02, h * 0.62, 0.02]} />
+      </mesh>
+      <mesh material={accent} position={[r + 0.04, h * 0.45 + 0.5, 0.29]}>
+        <boxGeometry args={[0.02, h * 0.62, 0.02]} />
+      </mesh>
+    </group>
+  );
+}
+
+// ───────────────────────── VALVE ─────────────────────────
+// Globe valve with actuator on top — small but very distinctive
+function ValveModel({ color, emphasized, dimmed }: ModelProps) {
+  const { base, steel, darkSteel, accent } = useMaterials(color, emphasized, dimmed);
+  return (
+    <group>
+      {/* globular body */}
+      <mesh material={base} castShadow position={[0, 0.45, 0]}>
+        <sphereGeometry args={[0.28, 24, 16]} />
+      </mesh>
+      {/* bonnet */}
+      <mesh material={darkSteel} position={[0, 0.78, 0]}>
+        <cylinderGeometry args={[0.14, 0.18, 0.22, 16]} />
+      </mesh>
+      {/* yoke arms */}
+      <mesh material={steel} position={[0.12, 1.0, 0]}>
+        <boxGeometry args={[0.06, 0.4, 0.1]} />
+      </mesh>
+      <mesh material={steel} position={[-0.12, 1.0, 0]}>
+        <boxGeometry args={[0.06, 0.4, 0.1]} />
+      </mesh>
+      {/* actuator body */}
+      <mesh material={darkSteel} position={[0, 1.3, 0]}>
+        <cylinderGeometry args={[0.22, 0.22, 0.25, 20]} />
+      </mesh>
+      {/* position indicator */}
+      <mesh material={accent} position={[0, 1.45, 0]}>
+        <cylinderGeometry args={[0.05, 0.05, 0.12, 8]} />
+      </mesh>
+      {/* flanges left/right */}
+      <mesh material={darkSteel} position={[0.5, 0.45, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.24, 0.24, 0.08, 20]} />
+      </mesh>
+      <mesh material={darkSteel} position={[-0.5, 0.45, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.24, 0.24, 0.08, 20]} />
+      </mesh>
+      <Bolts radius={0.21} y={0.45} count={8} material={accent} />
+      {/* stem */}
+      <mesh material={accent} position={[0, 0.95, 0]}>
+        <cylinderGeometry args={[0.03, 0.03, 0.4, 8]} />
+      </mesh>
+    </group>
+  );
+}
+
+// ───────────────────────── HEATER (fired) ─────────────────────────
+// Big box firebox with tall stack — unmistakably different from vessels
+function HeaterModel({ color, emphasized, dimmed }: ModelProps) {
+  const { base, steel, darkSteel, accent, hazard, glass } = useMaterials(color, emphasized, dimmed);
+  return (
+    <group>
+      {/* firebox (large rectangular) */}
+      <mesh material={base} castShadow receiveShadow position={[0, 1.3, 0]}>
+        <boxGeometry args={[1.8, 2.4, 1.6]} />
+      </mesh>
+      {/* refractory inner glow */}
+      <mesh material={glass} position={[0, 1.1, 0.82]}>
+        <boxGeometry args={[1.4, 1.8, 0.02]} />
+      </mesh>
+      {/* burner fronts (multiple) */}
+      {[-0.5, 0, 0.5].map((x, i) => (
+        <group key={i}>
+          <mesh material={darkSteel} position={[x, 0.4, 0.85]}>
+            <cylinderGeometry args={[0.16, 0.2, 0.2, 16]} rotation={[Math.PI / 2, 0, 0]} />
+          </mesh>
+          <mesh material={hazard} position={[x, 0.4, 0.97]}>
+            <cylinderGeometry args={[0.12, 0.12, 0.04, 16]} rotation={[Math.PI / 2, 0, 0]} />
+          </mesh>
+        </group>
+      ))}
+      {/* tube coils on walls (radiant section) */}
+      {Array.from({ length: 6 }).map((_, i) => (
+        <mesh key={i} material={accent} position={[0.88, 0.6 + i * 0.3, 0]}>
+          <boxGeometry args={[0.04, 0.2, 1.2]} />
+        </mesh>
+      ))}
+      {Array.from({ length: 6 }).map((_, i) => (
+        <mesh key={`l${i}`} material={accent} position={[-0.88, 0.6 + i * 0.3, 0]}>
+          <boxGeometry args={[0.04, 0.2, 1.2]} />
+        </mesh>
+      ))}
+      {/* convection section (smaller box on top) */}
+      <mesh material={steel} position={[0, 2.85, 0]}>
+        <boxGeometry args={[1.6, 0.6, 1.4]} />
+      </mesh>
+      {/* convection tube bundle */}
+      {Array.from({ length: 5 }).map((_, i) => (
+        <mesh key={i} material={accent} position={[-0.6 + i * 0.3, 2.85, 0]}>
+          <boxGeometry args={[0.05, 0.5, 1.2]} />
+        </mesh>
+      ))}
+      {/* stack (tall chimney) */}
+      <mesh material={darkSteel} position={[0, 4.0, 0]}>
+        <cylinderGeometry args={[0.35, 0.4, 1.8, 24]} />
+      </mesh>
+      {/* stack flange */}
+      <mesh material={darkSteel} position={[0, 3.2, 0]}>
+        <cylinderGeometry args={[0.42, 0.42, 0.1, 24]} />
+      </mesh>
+      {/* stack bracing */}
+      {[0, 1, 2].map((i) => {
+        const a = (i / 3) * Math.PI * 2;
+        return (
+          <mesh key={i} material={steel} position={[Math.cos(a) * 0.5, 3.6, Math.sin(a) * 0.5]} rotation={[0, -a, 0.5]}>
+            <boxGeometry args={[0.04, 1.2, 0.04]} />
+          </mesh>
+        );
+      })}
+      {/* process inlet/outlet */}
+      <mesh material={darkSteel} position={[-1.0, 0.6, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+      </mesh>
+      <mesh material={darkSteel} position={[1.0, 2.3, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.3, 16]} />
+      </mesh>
+    </group>
+  );
+}
+
+// ───────────────────────── FILTER ─────────────────────────
+// Vertical housing with visible cartridge bundle inside
+function FilterModel({ color, emphasized, dimmed }: ModelProps) {
+  const { base, steel, darkSteel, accent, glass } = useMaterials(color, emphasized, dimmed);
+  return (
+    <group>
+      {/* base */}
+      <mesh material={darkSteel} position={[0, 0.1, 0]}>
+        <cylinderGeometry args={[0.7, 0.75, 0.2, 24]} />
+      </mesh>
+      {/* housing (glass so cartridges are visible) */}
+      <mesh material={glass} position={[0, 1.2, 0]}>
+        <cylinderGeometry args={[0.6, 0.6, 2.0, 24]} />
+      </mesh>
+      {/* internal cartridges (vertical tubes) */}
+      {Array.from({ length: 7 }).map((_, i) => {
+        const a = (i / 7) * Math.PI * 2;
+        const rr = i === 0 ? 0 : 0.3;
+        return (
+          <mesh
+            key={i}
+            material={accent}
+            position={[Math.cos(a) * rr, 1.2, Math.sin(a) * rr]}
+          >
+            <cylinderGeometry args={[0.08, 0.08, 1.7, 12]} />
+          </mesh>
+        );
+      })}
+      {/* top flange & cover */}
+      <mesh material={darkSteel} position={[0, 2.25, 0]}>
+        <cylinderGeometry args={[0.72, 0.72, 0.15, 24]} />
+      </mesh>
+      <Bolts radius={0.65} y={2.25} count={12} material={accent} />
+      <mesh material={steel} position={[0, 2.4, 0]}>
+        <cylinderGeometry args={[0.6, 0.6, 0.15, 24]} />
+      </mesh>
+      {/* inlet (side) */}
+      <mesh material={darkSteel} position={[0.75, 0.7, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.4, 16]} />
+      </mesh>
+      {/* outlet (bottom) */}
+      <mesh material={darkSteel} position={[0, 0.1, 0]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.13, 0.13, 0.4, 16]} />
+      </mesh>
+      {/* drain valve at bottom */}
+      <mesh material={base} position={[0, 0.1, 0.6]} rotation={[Math.PI / 2, 0, 0]}>
+        <cylinderGeometry args={[0.08, 0.08, 0.2, 12]} />
+      </mesh>
+    </group>
+  );
+}
+
+// ───────────────────────── MOTOR ─────────────────────────
+// Horizontal cylindrical motor with prominent cooling fins & terminal box
+function MotorModel({ color, emphasized, dimmed }: ModelProps) {
+  const { base, steel, darkSteel, accent } = useMaterials(color, emphasized, dimmed);
+  return (
+    <group>
+      {/* baseplate */}
+      <mesh material={darkSteel} position={[0, 0.04, 0]}>
+        <boxGeometry args={[1.8, 0.08, 1.0]} />
+      </mesh>
+      <Bolts radius={0.75} y={0.085} count={8} material={accent} />
+      {/* motor body */}
+      <mesh material={base} castShadow position={[-0.1, 0.6, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.42, 0.42, 1.1, 32]} />
+      </mesh>
+      {/* end bells */}
+      <mesh material={darkSteel} position={[0.45, 0.6, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.45, 0.45, 0.1, 32]} />
+      </mesh>
+      <mesh material={darkSteel} position={[-0.65, 0.6, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.45, 0.45, 0.1, 32]} />
+      </mesh>
+      {/* cooling fins — radial */}
+      {Array.from({ length: 30 }).map((_, i) => (
+        <mesh
+          key={i}
+          material={steel}
+          position={[-0.1, 0.6, 0]}
+          rotation={[0, 0, (i / 30) * Math.PI * 2]}
+        >
+          <boxGeometry args={[0.9, 0.9, 0.012]} />
         </mesh>
       ))}
       {/* terminal box */}
-      <mesh material={dark} position={[0, 0.95, 0]}>
-        <boxGeometry args={[0.4, 0.25, 0.3]} />
+      <mesh material={accent} position={[-0.1, 1.0, 0]}>
+        <boxGeometry args={[0.5, 0.25, 0.32]} />
       </mesh>
       {/* shaft */}
-      <mesh material={accent} position={[0.6, 0.55, 0]} rotation={[0, 0, Math.PI / 2]}>
-        <cylinderGeometry args={[0.06, 0.06, 0.4, 12]} />
+      <mesh material={accent} position={[0.75, 0.6, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.06, 0.06, 0.5, 12]} />
+      </mesh>
+      {/* coupling */}
+      <mesh material={darkSteel} position={[1.0, 0.6, 0]} rotation={[0, 0, Math.PI / 2]}>
+        <cylinderGeometry args={[0.12, 0.12, 0.12, 16]} />
+      </mesh>
+      {/* feet */}
+      <mesh material={accent} position={[-0.4, 0.25, 0.35]}>
+        <boxGeometry args={[0.3, 0.3, 0.15]} />
+      </mesh>
+      <mesh material={accent} position={[-0.4, 0.25, -0.35]}>
+        <boxGeometry args={[0.3, 0.3, 0.15]} />
+      </mesh>
+      <mesh material={accent} position={[0.2, 0.25, 0.35]}>
+        <boxGeometry args={[0.3, 0.3, 0.15]} />
+      </mesh>
+      <mesh material={accent} position={[0.2, 0.25, -0.35]}>
+        <boxGeometry args={[0.3, 0.3, 0.15]} />
       </mesh>
     </group>
   );
@@ -587,7 +971,7 @@ export function EquipmentModel({ type, color, emphasized, dimmed, selected }: Eq
       return <MotorModel {...props} />;
     default:
       return (
-        <mesh material={undefined}>
+        <mesh>
           <boxGeometry args={[1, 1, 1]} />
         </mesh>
       );

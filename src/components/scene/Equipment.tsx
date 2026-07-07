@@ -35,21 +35,26 @@ export function Equipment({ equipment }: EquipmentProps) {
   useFrame((state) => {
     if (!groupRef.current) return;
     const t = state.clock.elapsedTime;
-    groupRef.current.position.y = equipment.position[1] + (hovered ? Math.sin(t * 2.5) * 0.04 : 0);
+    if (hovered) {
+      groupRef.current.position.y = equipment.position[1] + Math.sin(t * 2.5) * 0.04;
+    } else {
+      groupRef.current.position.y = THREE.MathUtils.lerp(
+        groupRef.current.position.y,
+        equipment.position[1],
+        0.1
+      );
+    }
   });
 
   if (isHidden) {
-    // still render faintly so the layout is legible
     return (
       <group ref={groupRef} position={equipment.position}>
-        <EquipmentModel
-          type={equipment.type}
-          color={meta.color}
-          dimmed
-        />
+        <EquipmentModel type={equipment.type} color={meta.color} dimmed />
       </group>
     );
   }
+
+  const isActive = isHighlighted || isSelected || isFocused || hovered;
 
   return (
     <group
@@ -76,38 +81,58 @@ export function Equipment({ equipment }: EquipmentProps) {
       <EquipmentModel
         type={equipment.type}
         color={meta.color}
-        emphasized={isHighlighted || isSelected || isFocused || hovered}
+        emphasized={isActive}
         selected={isSelected}
       />
 
-      {/* selection ring on ground */}
+      {/* selection ring on ground with glow */}
       {(isSelected || isFocused) && (
+        <>
+          <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[1.1, 1.4, 64]} />
+            <meshBasicMaterial color={accentColor} transparent opacity={0.55} side={THREE.DoubleSide} />
+          </mesh>
+          <mesh position={[0, 0.01, 0]} rotation={[-Math.PI / 2, 0, 0]}>
+            <ringGeometry args={[1.4, 1.6, 64]} />
+            <meshBasicMaterial color={accentColor} transparent opacity={0.2} side={THREE.DoubleSide} />
+          </mesh>
+        </>
+      )}
+
+      {/* hover indicator — subtle dot */}
+      {hovered && !isSelected && !isFocused && (
         <mesh position={[0, 0.02, 0]} rotation={[-Math.PI / 2, 0, 0]}>
-          <ringGeometry args={[1.0, 1.25, 48]} />
-          <meshBasicMaterial color={accentColor} transparent opacity={0.6} side={THREE.DoubleSide} />
+          <ringGeometry args={[0.95, 1.05, 32]} />
+          <meshBasicMaterial color={accentColor} transparent opacity={0.4} side={THREE.DoubleSide} />
         </mesh>
       )}
 
       {/* floating label */}
-      {(hovered || isSelected || isFocused) && (
+      {isActive && (
         <Billboard position={[0, getLabelHeight(equipment.type), 0]}>
-          <Html center distanceFactor={9} occlude={false}>
+          <Html center distanceFactor={9} occlude={false} zIndexRange={[20, 0]}>
             <div
               style={{
-                background: "rgba(15, 23, 42, 0.92)",
+                background: "rgba(2, 6, 23, 0.92)",
                 color: "white",
-                padding: "6px 10px",
-                borderRadius: "8px",
-                border: `1px solid ${meta.color}`,
+                padding: "7px 12px",
+                borderRadius: "10px",
+                border: `1px solid ${meta.color}66`,
+                borderLeft: `3px solid ${meta.color}`,
                 fontSize: "13px",
                 fontFamily: "var(--font-geist-sans, sans-serif)",
                 whiteSpace: "nowrap",
                 pointerEvents: "none",
-                boxShadow: "0 4px 14px rgba(0,0,0,0.35)",
+                boxShadow: `0 8px 24px rgba(0,0,0,0.5), 0 0 16px ${meta.color}33`,
+                backdropFilter: "blur(8px)",
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: "13px" }}>{equipment.name}</div>
-              <div style={{ opacity: 0.7, fontSize: "11px" }}>{meta.singularName}</div>
+              <div style={{ fontWeight: 600, fontSize: "13px", lineHeight: 1.2 }}>
+                {equipment.name}
+              </div>
+              <div style={{ opacity: 0.6, fontSize: "10px", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+                {meta.singularName}
+              </div>
             </div>
           </Html>
         </Billboard>
@@ -119,27 +144,31 @@ export function Equipment({ equipment }: EquipmentProps) {
 function getLabelHeight(type: EquipmentInstance["type"]): number {
   switch (type) {
     case "column":
-      return 4.0;
+      return 4.6;
     case "reactor":
-      return 3.2;
+      return 3.4;
     case "separator":
-      return 2.8;
-    case "tank":
-    case "storageTank":
       return 3.0;
+    case "tank":
+      return 3.2;
+    case "storageTank":
+      return 3.8;
+    case "heater":
+      return 5.2;
     case "compressor":
-      return 1.7;
+      return 2.2;
     case "heatExchanger":
     case "cooler":
-    case "heater":
-      return 2.4;
+      return 2.0;
     case "filter":
-      return 2.0;
+      return 2.8;
     case "motor":
-      return 1.3;
+      return 1.5;
     case "valve":
-      return 1.6;
+      return 1.8;
+    case "pump":
+      return 2.4;
     default:
-      return 2.0;
+      return 2.5;
   }
 }

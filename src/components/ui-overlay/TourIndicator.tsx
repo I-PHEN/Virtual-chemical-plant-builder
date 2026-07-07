@@ -16,9 +16,9 @@ export function TourIndicator() {
   const total = currentPlant.processSteps.length;
 
   return (
-    <div className="pointer-events-auto w-[320px] rounded-2xl border border-sky-500/40 bg-slate-900/90 p-4 backdrop-blur-md shadow-2xl">
+    <div className="pointer-events-auto w-[340px] rounded-2xl border border-sky-500/30 bg-slate-900/85 p-4 shadow-2xl ring-1 ring-sky-500/10 backdrop-blur-xl">
       <div className="mb-2 flex items-center justify-between">
-        <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wider text-sky-300">
+        <div className="flex items-center gap-2 text-[10px] font-semibold uppercase tracking-[0.15em] text-sky-300">
           <MapPin className="h-3.5 w-3.5" />
           Guided Tour · Step {step.order} / {total}
         </div>
@@ -28,7 +28,7 @@ export function TourIndicator() {
             selectEquipment(null);
           }}
           aria-label="End tour"
-          className="rounded p-0.5 text-slate-400 hover:bg-slate-800 hover:text-white"
+          className="rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-800 hover:text-white"
         >
           <X className="h-4 w-4" />
         </button>
@@ -41,8 +41,8 @@ export function TourIndicator() {
         {currentPlant.processSteps.map((s, i) => (
           <div
             key={s.order}
-            className={`h-1 flex-1 rounded-full ${
-              i <= tourStep ? "bg-sky-500" : "bg-slate-700"
+            className={`h-1 flex-1 rounded-full transition-colors ${
+              i <= tourStep ? "bg-gradient-to-r from-sky-500 to-cyan-400" : "bg-slate-700"
             }`}
           />
         ))}
@@ -52,7 +52,7 @@ export function TourIndicator() {
         <button
           onClick={() => setTourStep(Math.max(0, tourStep - 1))}
           disabled={tourStep === 0}
-          className="flex items-center gap-1 rounded-lg px-2 py-1 text-xs text-slate-300 hover:bg-slate-800 disabled:opacity-40"
+          className="flex items-center gap-1 rounded-lg px-2.5 py-1.5 text-xs text-slate-300 transition-colors hover:bg-slate-800 disabled:opacity-40"
         >
           <ChevronLeft className="h-3.5 w-3.5" /> Prev
         </button>
@@ -64,7 +64,7 @@ export function TourIndicator() {
             if (nextStep) selectEquipment(nextStep.equipmentId);
           }}
           disabled={tourStep === total - 1}
-          className="flex items-center gap-1 rounded-lg bg-sky-500 px-2 py-1 text-xs font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+          className="flex items-center gap-1 rounded-lg bg-gradient-to-br from-sky-500 to-cyan-500 px-3 py-1.5 text-xs font-medium text-white shadow-lg shadow-sky-500/25 transition-all hover:from-sky-400 hover:to-cyan-400 disabled:opacity-40"
         >
           Next <ChevronRight className="h-3.5 w-3.5" />
         </button>

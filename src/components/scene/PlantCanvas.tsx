@@ -7,7 +7,7 @@ import { useAppStore } from "@/lib/store/useAppStore";
 import { Equipment } from "./Equipment";
 import { PipeNetwork } from "./PipeNetwork";
 import { CameraRig } from "./CameraRig";
-import { Ground, Lighting } from "./Environment";
+import { Environment, Ground } from "./Environment";
 
 export function PlantCanvas() {
   const currentPlant = useAppStore((s) => s.currentPlant);
@@ -16,19 +16,18 @@ export function PlantCanvas() {
   return (
     <Canvas
       shadows
-      dpr={[1, 1.8]}
+      dpr={[1, 2]}
       className="absolute inset-0"
       onPointerMissed={() => selectEquipment(null)}
-      gl={{ antialias: true, powerPreference: "high-performance" }}
+      gl={{
+        antialias: true,
+        powerPreference: "high-performance",
+        toneMapping: 2, // ACESFilmicToneMapping
+        toneMappingExposure: 1.05,
+      }}
     >
-      <color attach="background" args={["#0b1220"]} />
-      <fog attach="fog" args={["#0b1220", 28, 75]} />
-
-      <PerspectiveCamera makeDefault position={[0, 7, 18]} fov={50} near={0.1} far={300} />
-
-      <Lighting />
-
       <Suspense fallback={null}>
+        <Environment />
         <Ground />
         {currentPlant && (
           <>
@@ -40,6 +39,8 @@ export function PlantCanvas() {
           </>
         )}
       </Suspense>
+
+      <PerspectiveCamera makeDefault position={[0, 7, 20]} fov={45} near={0.1} far={400} />
     </Canvas>
   );
 }
