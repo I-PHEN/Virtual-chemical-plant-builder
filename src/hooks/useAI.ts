@@ -23,6 +23,7 @@ export function useAIConversation() {
   const showAll = useAppStore((s) => s.showAll);
   const setTourStep = useAppStore((s) => s.setTourStep);
   const selectEquipment = useAppStore((s) => s.selectEquipment);
+  const setCurrentCaption = useAppStore((s) => s.setCurrentCaption);
 
   const send = useCallback(
     async (text: string) => {
@@ -66,6 +67,9 @@ export function useAIConversation() {
         };
         addMessage(assistantMsg);
 
+        // set the caption so the live caption bar shows what the AI is saying
+        setCurrentCaption(data.text);
+
         // speak the reply
         const speak = (window as any).__plantSpeak as ((t: string) => void) | undefined;
         if (speak) speak(data.text);
@@ -83,7 +87,7 @@ export function useAIConversation() {
         });
       }
     },
-    [addMessage, focusEquipment, setHighlight, setDisplayStateByType, showAll, setTourStep, selectEquipment]
+    [addMessage, focusEquipment, setHighlight, setDisplayStateByType, showAll, setTourStep, selectEquipment, setCurrentCaption]
   );
 
   return { send };
@@ -137,6 +141,7 @@ export function usePlantBuilder() {
   const setGenerating = useAppStore((s) => s.setGenerating);
   const setPlant = useAppStore((s) => s.setPlant);
   const addMessage = useAppStore((s) => s.addMessage);
+  const setCurrentCaption = useAppStore((s) => s.setCurrentCaption);
 
   const build = useCallback(
     async (command: string) => {
@@ -163,6 +168,7 @@ export function usePlantBuilder() {
             content: data.intro,
             timestamp: Date.now(),
           });
+          setCurrentCaption(data.intro);
           const speak = (window as any).__plantSpeak as ((t: string) => void) | undefined;
           if (speak) speak(data.intro);
           return;
@@ -183,6 +189,7 @@ export function usePlantBuilder() {
           content: data.intro,
           timestamp: Date.now(),
         });
+        setCurrentCaption(data.intro);
         const speak = (window as any).__plantSpeak as ((t: string) => void) | undefined;
         if (speak) speak(data.intro);
       } catch (err) {
@@ -197,7 +204,7 @@ export function usePlantBuilder() {
         });
       }
     },
-    [setGenerating, setPlant, addMessage]
+    [setGenerating, setPlant, addMessage, setCurrentCaption]
   );
 
   return { build };

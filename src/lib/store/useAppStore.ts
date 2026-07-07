@@ -29,6 +29,8 @@ interface AppState {
   isAssistantSpeaking: boolean;
   isListening: boolean;
   voiceEnabled: boolean;
+  /** The text the AI is currently speaking (shown as a live caption) */
+  currentCaption: string;
 
   // Actions
   setPlant: (plant: PlantTemplate, intro: string) => void;
@@ -45,6 +47,7 @@ interface AppState {
   setAssistantSpeaking: (v: boolean) => void;
   setListening: (v: boolean) => void;
   setVoiceEnabled: (v: boolean) => void;
+  setCurrentCaption: (v: string) => void;
   resetPlant: () => void;
 }
 
@@ -64,6 +67,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isAssistantSpeaking: false,
   isListening: false,
   voiceEnabled: true,
+  currentCaption: "",
 
   setPlant: (plant, intro) =>
     set({
@@ -133,9 +137,13 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   clearMessages: () => set({ messages: [] }),
 
-  setAssistantSpeaking: (v) => set({ isAssistantSpeaking: v }),
+  setAssistantSpeaking: (v) => {
+    set({ isAssistantSpeaking: v });
+    if (!v) set({ currentCaption: "" });
+  },
   setListening: (v) => set({ isListening: v }),
   setVoiceEnabled: (v) => set({ voiceEnabled: v }),
+  setCurrentCaption: (v) => set({ currentCaption: v }),
 
   resetPlant: () =>
     set({
@@ -148,6 +156,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       highlightType: null,
       tourStep: null,
       messages: [],
+      currentCaption: "",
     }),
 }));
 

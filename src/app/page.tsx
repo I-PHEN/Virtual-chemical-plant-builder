@@ -11,6 +11,7 @@ import { EquipmentPanel } from "@/components/ui-overlay/EquipmentPanel";
 import { CommandBar } from "@/components/ui-overlay/CommandBar";
 import { VoiceButton } from "@/components/ui-overlay/VoiceButton";
 import { TourIndicator } from "@/components/ui-overlay/TourIndicator";
+import { CaptionBar } from "@/components/ui-overlay/CaptionBar";
 
 // React Three Fiber requires WebGL — load the canvas only on the client.
 const PlantCanvas = dynamic(
@@ -65,14 +66,9 @@ export default function Home() {
             <Header />
           </div>
 
-          {/* middle row: left chat, right equipment panel */}
-          <div className="pointer-events-none flex flex-1 items-start justify-between gap-4 px-4 pt-2">
-            <div className="flex flex-col gap-3">
-              <ChatPanel onSend={handleSend} busy={busy} />
-            </div>
-            <div className="flex flex-col gap-3">
-              <EquipmentPanel />
-            </div>
+          {/* middle row: equipment panel on the right (chat is collapsed by default) */}
+          <div className="pointer-events-none flex flex-1 items-start justify-end gap-4 px-4 pt-2">
+            <EquipmentPanel />
           </div>
 
           {/* tour indicator (top-center under header) */}
@@ -80,10 +76,24 @@ export default function Home() {
             <TourIndicator />
           </div>
 
-          {/* bottom: voice button + command bar */}
-          <div className="pointer-events-none flex flex-col items-center gap-3 px-4 pb-5">
-            <CommandBar onCommand={handleSend} />
-            <VoiceButton onTranscript={handleSend} />
+          {/* live caption bar — primary text interface while AI speaks */}
+          <CaptionBar />
+
+          {/* bottom: voice button (primary) + command bar + collapsed chat */}
+          <div className="pointer-events-none absolute bottom-0 left-0 right-0 flex items-end justify-between gap-4 px-4 pb-5">
+            {/* left: chat (collapsed by default — voice first) */}
+            <div className="pointer-events-auto">
+              <ChatPanel onSend={handleSend} busy={busy} />
+            </div>
+
+            {/* center: voice + commands */}
+            <div className="pointer-events-auto flex flex-col items-center gap-3">
+              <CommandBar onCommand={handleSend} />
+              <VoiceButton onTranscript={handleSend} />
+            </div>
+
+            {/* right: spacer to balance layout */}
+            <div className="w-[52px]" />
           </div>
         </div>
       )}

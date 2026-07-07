@@ -16,7 +16,7 @@ interface ChatPanelProps {
 export function ChatPanel({ onSend, busy }: ChatPanelProps) {
   const messages = useAppStore((s) => s.messages);
   const [input, setInput] = useState("");
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

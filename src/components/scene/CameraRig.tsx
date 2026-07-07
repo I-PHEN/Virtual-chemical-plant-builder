@@ -17,17 +17,20 @@ interface CameraRigProps {
 }
 
 /**
- * Cinematic camera rig.
+ * Camera rig with clear ownership rules:
  *
- * Behaviour:
- *  - When the user focuses on equipment (or a tour step changes), the
- *    camera lerps to a vantage point near that equipment.
- *  - Once close, the camera slowly ORBITS around the equipment so the
- *    scene is never static while the AI explains. This is the "AI
- *    controls the camera during walkthrough" behaviour.
- *  - Idle drift when nothing is focused — a gentle floating motion.
- *  - User can still grab the scene and orbit manually; we suspend the
- *    cinematic orbit for a few seconds after any manual interaction.
+ *  - MANUAL mode (default): the user has full control via OrbitControls.
+ *    The rig never touches the camera. This is what the user expects.
+ *
+ *  - CINEMATIC mode: triggered when the AI focuses on equipment or jumps
+ *    to a tour step. The rig flies the camera to the target, then slowly
+ *    orbits while the AI speaks. The moment the user grabs the camera
+ *    (pointer down or wheel), cinematic mode ENDS immediately and control
+ *    returns to the user. It does not resume on its own — only a new AI
+ *    focus/tour action re-enters cinematic mode.
+ *
+ *  - IDLE drift: only when no plant is focused AND the user hasn't
+ *    interacted yet. Stops the moment the user touches anything.
  */
 export function CameraRig({ equipment }: CameraRigProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -38,43 +41,50 @@ export function CameraRig({ equipment }: CameraRigProps) {
   const currentPlant = useAppStore((s) => s.currentPlant);
   const isAssistantSpeaking = useAppStore((s) => s.isAssistantSpeaking);
 
+  // Cinematic state
+  const mode = useRef<"manual" | "flying" | "orbiting">("manual");
   const targetPos = useRef(new THREE.Vector3(0, 7, 20));
   const targetLook = useRef(new THREE.Vector3(0, 1, 0));
-  const animating = useRef(false);
-  const arrived = useRef(false); // have we finished approaching the target?
-  const orbitAngle = useRef(0);
   const orbitCenter = useRef(new THREE.Vector3(0, 1, 0));
+  const orbitAngle = useRef(0);
   const orbitRadius = useRef(8);
   const orbitHeight = useRef(4);
-  const lastUserInteraction = useRef(0); // timestamp
+  const orbitUntil = useRef(0); // timestamp when orbiting should stop
   const idleTime = useRef(0);
+  const userInteracted = useRef(false);
+  const lastFocusId = useRef<string | null>(null);
+  const lastTourStep = useRef<number | null>(null);
 
-  // Track manual interaction so we pause auto-orbit briefly
+  // Track manual interaction — immediately ends cinematic mode
   useEffect(() => {
     const dom = gl.domElement;
-    const mark = () => {
-      lastUserInteraction.current = performance.now();
-      animating.current = false; // let user drive
+    const onInteract = () => {
+      userInteracted.current = true;
+      if (mode.current !== "manual") {
+        mode.current = "manual";
+      }
     };
-    dom.addEventListener("pointerdown", mark);
-    dom.addEventListener("wheel", mark, { passive: true });
+    dom.addEventListener("pointerdown", onInteract);
+    dom.addEventListener("wheel", onInteract, { passive: true });
+    dom.addEventListener("touchstart", onInteract, { passive: true });
     return () => {
-      dom.removeEventListener("pointerdown", mark);
-      dom.removeEventListener("wheel", mark);
+      dom.removeEventListener("pointerdown", onInteract);
+      dom.removeEventListener("wheel", onInteract);
+      dom.removeEventListener("touchstart", onInteract);
     };
   }, [gl]);
 
-  // When focus changes, compute target
+  // Trigger cinematic move when focus changes
   useEffect(() => {
-    if (!focusId) return;
+    if (!focusId || focusId === lastFocusId.current) return;
+    lastFocusId.current = focusId;
     const eq = equipment.find((e) => e.id === focusId);
     if (!eq) return;
     const target = new THREE.Vector3(...eq.position);
     orbitCenter.current.copy(target);
     orbitRadius.current = 7.5;
     orbitHeight.current = 3.5;
-    orbitAngle.current = 0.6; // start offset so we approach from a 3/4 view
-    // place camera at the orbit position
+    orbitAngle.current = 0.6;
     const startPos = new THREE.Vector3(
       target.x + Math.cos(orbitAngle.current) * orbitRadius.current,
       target.y + orbitHeight.current,
@@ -82,13 +92,15 @@ export function CameraRig({ equipment }: CameraRigProps) {
     );
     targetPos.current.copy(startPos);
     targetLook.current.copy(target).add(new THREE.Vector3(0, 1, 0));
-    animating.current = true;
-    arrived.current = false;
+    userInteracted.current = false;
+    mode.current = "flying";
   }, [focusId, equipment]);
 
-  // Tour step changes
+  // Trigger cinematic move when tour step changes
   useEffect(() => {
-    if (tourStep === null || !currentPlant) return;
+    if (tourStep === null || tourStep === lastTourStep.current) return;
+    lastTourStep.current = tourStep;
+    if (!currentPlant) return;
     const step = currentPlant.processSteps[tourStep];
     if (!step) return;
     const eq = equipment.find((e) => e.id === step.equipmentId);
@@ -97,7 +109,6 @@ export function CameraRig({ equipment }: CameraRigProps) {
     orbitCenter.current.copy(target);
     orbitRadius.current = 7.0;
     orbitHeight.current = 3.2;
-    // each new tour step shifts the orbit start angle for variety
     orbitAngle.current = 0.6 + tourStep * 0.4;
     const startPos = new THREE.Vector3(
       target.x + Math.cos(orbitAngle.current) * orbitRadius.current,
@@ -106,89 +117,97 @@ export function CameraRig({ equipment }: CameraRigProps) {
     );
     targetPos.current.copy(startPos);
     targetLook.current.copy(target).add(new THREE.Vector3(0, 1, 0));
-    animating.current = true;
-    arrived.current = false;
+    userInteracted.current = false;
+    mode.current = "flying";
   }, [tourStep, currentPlant, equipment]);
 
-  // Reset to overview when nothing is focused
+  // When focus/tour cleared, return to manual (no auto-reset of position)
   useEffect(() => {
     if (focusId === null && tourStep === null) {
-      targetPos.current.set(0, 7, 20);
-      targetLook.current.set(0, 1, 0);
-      animating.current = true;
-      arrived.current = false;
+      mode.current = "manual";
+      lastFocusId.current = null;
+      lastTourStep.current = null;
     }
   }, [focusId, tourStep]);
 
   useFrame((_, delta) => {
-    const now = performance.now();
-    const sinceInteraction = now - lastUserInteraction.current;
-
-    if (animating.current) {
-      // approach the target orbit position
-      camera.position.lerp(targetPos.current, 0.045);
-      if (controlsRef.current) {
-        controlsRef.current.target.lerp(targetLook.current, 0.06);
-        controlsRef.current.update();
-      }
-      if (camera.position.distanceTo(targetPos.current) < 0.25) {
-        animating.current = false;
-        arrived.current = true;
-      }
-      return;
-    }
-
-    if (arrived.current && (focusId || tourStep !== null)) {
-      // Once we've arrived, slowly orbit around the equipment while the AI
-      // explains — but pause for ~2.5s after any manual interaction so the
-      // user can drag freely.
-      if (sinceInteraction > 2500) {
-        orbitAngle.current += delta * 0.18; // slow cinematic orbit
-        const target = orbitCenter.current;
-        const desired = new THREE.Vector3(
-          target.x + Math.cos(orbitAngle.current) * orbitRadius.current,
-          target.y + orbitHeight.current,
-          target.z + Math.sin(orbitAngle.current) * orbitRadius.current
-        );
-        camera.position.lerp(desired, 0.04);
+    // MANUAL mode — do nothing. User has full control via OrbitControls.
+    if (mode.current === "manual") {
+      // Gentle idle drift only if user has never interacted AND nothing is focused
+      if (!userInteracted.current && !focusId && tourStep === null) {
+        idleTime.current += delta;
+        const t = idleTime.current;
+        const driftX = Math.sin(t * 0.1) * 1.2;
+        const driftY = 7 + Math.sin(t * 0.15) * 0.3;
+        const driftZ = 20 + Math.cos(t * 0.1) * 1.2;
+        camera.position.lerp(new THREE.Vector3(driftX, driftY, driftZ), 0.015);
         if (controlsRef.current) {
-          controlsRef.current.target.lerp(
-            target.clone().add(new THREE.Vector3(0, 1, 0)),
-            0.05
-          );
+          controlsRef.current.target.lerp(new THREE.Vector3(0, 1, 0), 0.02);
           controlsRef.current.update();
         }
       }
       return;
     }
 
-    // Idle drift when nothing focused — gentle floating overview
-    if (!focusId && tourStep === null) {
-      idleTime.current += delta;
-      const t = idleTime.current;
-      const driftX = Math.sin(t * 0.12) * 1.5;
-      const driftY = 7 + Math.sin(t * 0.18) * 0.4;
-      const driftZ = 20 + Math.cos(t * 0.12) * 1.5;
-      camera.position.lerp(new THREE.Vector3(driftX, driftY, driftZ), 0.02);
+    // FLYING mode — approach the target position
+    if (mode.current === "flying") {
+      camera.position.lerp(targetPos.current, 0.05);
       if (controlsRef.current) {
-        controlsRef.current.target.lerp(new THREE.Vector3(0, 1, 0), 0.03);
+        controlsRef.current.target.lerp(targetLook.current, 0.06);
         controlsRef.current.update();
       }
+      if (camera.position.distanceTo(targetPos.current) < 0.3) {
+        mode.current = "orbiting";
+        // orbit for a fixed window; extends while AI is speaking
+        orbitUntil.current = performance.now() + 12000;
+      }
+      return;
+    }
+
+    // ORBITING mode — slow cinematic orbit, but only while AI is speaking
+    // OR for a limited window after arriving. Stops the moment the user
+    // touches the camera (handled by the pointer/wheel listener which sets
+    // mode to "manual").
+    if (mode.current === "orbiting") {
+      const now = performance.now();
+      // Keep orbiting while AI is speaking, otherwise stop after the window
+      if (!isAssistantSpeaking && now > orbitUntil.current) {
+        mode.current = "manual";
+        return;
+      }
+      // extend the window while speaking
+      if (isAssistantSpeaking) {
+        orbitUntil.current = now + 4000;
+      }
+      orbitAngle.current += delta * 0.15;
+      const target = orbitCenter.current;
+      const desired = new THREE.Vector3(
+        target.x + Math.cos(orbitAngle.current) * orbitRadius.current,
+        target.y + orbitHeight.current,
+        target.z + Math.sin(orbitAngle.current) * orbitRadius.current
+      );
+      camera.position.lerp(desired, 0.035);
+      if (controlsRef.current) {
+        controlsRef.current.target.lerp(
+          target.clone().add(new THREE.Vector3(0, 1, 0)),
+          0.04
+        );
+        controlsRef.current.update();
+      }
+      return;
     }
   });
-
-  // suppress unused-var lint for isAssistantSpeaking (reserved for future lip-sync cues)
-  void isAssistantSpeaking;
 
   return (
     <OrbitControls
       ref={controlsRef as any}
       enableDamping
-      dampingFactor={0.1}
-      minDistance={3}
-      maxDistance={50}
+      dampingFactor={0.08}
+      minDistance={2.5}
+      maxDistance={60}
       maxPolarAngle={Math.PI / 2.05}
       target={[0, 1, 0]}
+      makeDefault
     />
   );
 }
