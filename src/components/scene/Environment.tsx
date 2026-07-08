@@ -129,13 +129,13 @@ export function Environment() {
       {/* Soft fog for depth — matches the horizon haze */}
       <fog attach="fog" args={["#8a8a7a", 40, 120]} />
 
-      {/* Lighting — warm low sun + cool sky fill, like real outdoor industrial */}
-      <ambientLight intensity={0.5} color="#a0a8b0" />
-      <hemisphereLight args={["#8a8a7a", "#4a4540", 0.6]} />
-      {/* Warm low-angle sun */}
+      {/* Lighting — strong directional sun + cool sky fill */}
+      <ambientLight intensity={0.4} color="#a0a8b0" />
+      <hemisphereLight args={["#8a8a7a", "#4a4540", 0.5]} />
+      {/* Strong warm low-angle sun for dramatic shadows */}
       <directionalLight
-        position={[30, 18, -20]}
-        intensity={1.4}
+        position={[35, 25, -15]}
+        intensity={2.0}
         color="#ffd9a0"
         castShadow
         shadow-mapSize-width={2048}
@@ -147,9 +147,10 @@ export function Environment() {
         shadow-camera-near={0.5}
         shadow-camera-far={100}
         shadow-bias={-0.0005}
+        shadow-normalBias={0.02}
       />
       {/* Cool sky fill from opposite side */}
-      <directionalLight position={[-20, 10, 15]} intensity={0.4} color="#a0b0c0" />
+      <directionalLight position={[-20, 12, 15]} intensity={0.5} color="#a0b0c0" />
     </>
   );
 }

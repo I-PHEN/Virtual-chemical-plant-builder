@@ -9,7 +9,8 @@ import { PipeNetwork } from "./PipeNetwork";
 import { CameraRig } from "./CameraRig";
 import { Environment, Ground, IndustrialBackdrop, Foundation } from "./Environment";
 import { CameraController } from "./CameraController";
-import { PipeRackStructure, Bund, Platform, Stairway, ControlRoom, FlareStack } from "./Structures";
+import { PipeRackStructure, Bund, Platform, Stairway } from "./Structures";
+import { SafetyShower, FireExtinguisher, WarningSign, DrainageChannel, ServiceRoad } from "./SafetySystems";
 
 export function PlantCanvas() {
   const currentPlant = useAppStore((s) => s.currentPlant);
@@ -93,6 +94,19 @@ export function PlantCanvas() {
               }
               return null;
             })}
+
+            {/* Safety systems — distributed around the plant */}
+            <SafetyShower position={[-6, 0, 6]} />
+            <FireExtinguisher position={[4, 0, 4]} />
+            <FireExtinguisher position={[-2, 0, -4]} />
+            <WarningSign position={[0, 0, 8]} />
+            <WarningSign position={[10, 0, -2]} color="#dc2626" />
+
+            {/* Drainage channels along main aisles */}
+            <DrainageChannel position={[0, 0, -1]} length={20} rotation={0} />
+
+            {/* Service road on the perimeter */}
+            <ServiceRoad position={[0, 0, 14]} length={30} width={4} rotation={0} />
 
             <PipeNetwork
               equipment={currentPlant.equipment}
