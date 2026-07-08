@@ -57,7 +57,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "Why must you never start a centrifugal pump against a closed discharge valve for long?",
       "What do the affinity laws tell you about variable-speed pumping?",
     ],
-    color: "#3b82f6",
+    color: "#475569",
   },
 
   tank: {
@@ -103,7 +103,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "How do you protect a tank from overfilling?",
       "What is residence time and why does it matter for a feed tank?",
     ],
-    color: "#14b8a6",
+    color: "#64748b",
   },
 
   storageTank: {
@@ -140,7 +140,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "Why use a floating-roof tank for volatile liquids?",
       "What is a bund and how is its capacity sized?",
     ],
-    color: "#0d9488",
+    color: "#6b7280",
   },
 
   compressor: {
@@ -187,7 +187,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "Why does compressing a gas heat it up, and why do we intercool?",
       "How does gas molecular weight affect compressor performance?",
     ],
-    color: "#a855f7",
+    color: "#4b5563",
   },
 
   heatExchanger: {
@@ -240,7 +240,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "How does fouling affect heat exchanger performance over time?",
       "Explain the difference between shell-side and tube-side flow.",
     ],
-    color: "#f59e0b",
+    color: "#9ca3af",
   },
 
   heater: {
@@ -277,7 +277,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "Why monitor tube skin temperature in a fired heater?",
       "What is excess air and why does it matter for efficiency?",
     ],
-    color: "#ef4444",
+    color: "#7a6b5d",
   },
 
   cooler: {
@@ -314,7 +314,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "Why is cooling water return temperature limited?",
       "What happens if cooling water flow is lost to a cooler?",
     ],
-    color: "#06b6d4",
+    color: "#7c8794",
   },
 
   reactor: {
@@ -372,7 +372,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "Explain reaction runaway and how it is prevented.",
       "Why does temperature affect rate exponentially?",
     ],
-    color: "#dc2626",
+    color: "#6b6b6b",
   },
 
   column: {
@@ -426,7 +426,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "What is weeping and what is flooding in a tray column?",
       "Why do we use packing instead of trays in some columns?",
     ],
-    color: "#8b5cf6",
+    color: "#52525b",
   },
 
   separator: {
@@ -470,7 +470,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "What is liquid carry-over and how is it prevented?",
       "Explain the role of a demister pad.",
     ],
-    color: "#10b981",
+    color: "#6b7280",
   },
 
   valve: {
@@ -510,7 +510,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "Explain valve cavitation.",
       "What is Cv and how is it used to size a valve?",
     ],
-    color: "#64748b",
+    color: "#78716c",
   },
 
   filter: {
@@ -547,7 +547,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "When would you choose a cartridge filter over a bag filter?",
       "What does filter blinding mean?",
     ],
-    color: "#78716c",
+    color: "#8b8378",
   },
 
   motor: {
@@ -627,7 +627,7 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
       "What is the typical liquid velocity in a process pipe and why?",
       "Explain Reynolds number and its significance.",
     ],
-    color: "#94a3b8",
+    color: "#9ca3af",
   },
 };
 

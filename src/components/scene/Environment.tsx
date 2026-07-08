@@ -4,12 +4,96 @@ import { useMemo } from "react";
 import * as THREE from "three";
 
 /**
- * Professional studio-grade environment: deep dark gradient background,
- * reflective floor with subtle grid, atmospheric fog, three-point lighting
- * with accent colors, and a soft environment map for metallic reflections.
+ * Realistic industrial environment.
+ *
+ * Instead of a dark void with a grid, this creates:
+ *  - An overcast dawn/dusk sky gradient (typical industrial facility look)
+ *  - A concrete-textured ground with subtle wear
+ *  - Distant industrial buildings/silos as a backdrop
+ *  - Warm directional sunlight + cool sky fill (realistic outdoor lighting)
+ *  - A perimeter fence and pipe rack structures
  */
 export function Environment() {
-  // Build a soft gradient environment map so metal materials get reflections
+  // Sky gradient texture
+  const skyTexture = useMemo(() => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 16;
+    canvas.height = 512;
+    const ctx = canvas.getContext("2d")!;
+    const grad = ctx.createLinearGradient(0, 0, 0, 512);
+    // Overcast industrial dawn — grey-blue at top, warm haze at horizon
+    grad.addColorStop(0, "#3a4555");
+    grad.addColorStop(0.4, "#5a6573");
+    grad.addColorStop(0.75, "#8a8a7a");
+    grad.addColorStop(0.9, "#b0a890");
+    grad.addColorStop(1, "#c8bca0");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 16, 512);
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
+  // Concrete ground texture
+  const concreteTexture = useMemo(() => {
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+
+    // Base concrete color
+    ctx.fillStyle = "#6b6960";
+    ctx.fillRect(0, 0, size, size);
+
+    // Add noise for concrete texture
+    const imageData = ctx.getImageData(0, 0, size, size);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const noise = (Math.random() - 0.5) * 30;
+      data[i] = Math.max(0, Math.min(255, data[i] + noise));
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+    }
+    ctx.putImageData(imageData, 0, 0);
+
+    // Subtle expansion joints (concrete grid)
+    ctx.strokeStyle = "rgba(40, 38, 33, 0.6)";
+    ctx.lineWidth = 3;
+    for (let i = 0; i <= 4; i++) {
+      const p = (i / 4) * size;
+      ctx.beginPath();
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, p);
+      ctx.lineTo(size, p);
+      ctx.stroke();
+    }
+
+    // A few oil stains / wear marks
+    for (let i = 0; i < 8; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const r = 10 + Math.random() * 30;
+      const stainGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      stainGrad.addColorStop(0, "rgba(30, 28, 25, 0.3)");
+      stainGrad.addColorStop(1, "rgba(30, 28, 25, 0)");
+      ctx.fillStyle = stainGrad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(20, 20);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
+  // Soft env map for reflections
   const envMap = useMemo(() => {
     const size = 256;
     const canvas = document.createElement("canvas");
@@ -17,149 +101,261 @@ export function Environment() {
     canvas.height = size;
     const ctx = canvas.getContext("2d")!;
     const grad = ctx.createLinearGradient(0, 0, 0, size);
-    grad.addColorStop(0, "#1e293b"); // top — slate
-    grad.addColorStop(0.5, "#0f172a");
-    grad.addColorStop(1, "#020617"); // bottom — near black
+    grad.addColorStop(0, "#5a6573");
+    grad.addColorStop(0.5, "#3a4555");
+    grad.addColorStop(1, "#1a1f28");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, size, size);
-    // a few light blobs to give metal something to reflect
-    ctx.fillStyle = "rgba(56, 189, 248, 0.5)"; // sky
+    ctx.fillStyle = "rgba(200, 188, 160, 0.4)";
     ctx.beginPath();
-    ctx.arc(size * 0.7, size * 0.25, size * 0.12, 0, Math.PI * 2);
+    ctx.arc(size * 0.5, size * 0.7, size * 0.15, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "rgba(167, 139, 250, 0.4)"; // violet
-    ctx.beginPath();
-    ctx.arc(size * 0.25, size * 0.35, size * 0.1, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(251, 191, 36, 0.3)"; // warm
-    ctx.beginPath();
-    ctx.arc(size * 0.5, size * 0.6, size * 0.08, 0, Math.PI * 2);
-    ctx.fill();
-
     const tex = new THREE.CanvasTexture(canvas);
     tex.mapping = THREE.EquirectangularReflectionMapping;
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   }, []);
 
-  // Floor texture — dark polished concrete with subtle grid
-  const floorTexture = useMemo(() => {
-    const size = 1024;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d")!;
-    // base
-    const grad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 1.2);
-    grad.addColorStop(0, "#1e293b");
-    grad.addColorStop(0.6, "#0f172a");
-    grad.addColorStop(1, "#020617");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, size, size);
-    // grid lines
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.12)";
-    ctx.lineWidth = 1.5;
-    const step = size / 24;
-    for (let i = 0; i <= 24; i++) {
-      ctx.beginPath();
-      ctx.moveTo(i * step, 0);
-      ctx.lineTo(i * step, size);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, i * step);
-      ctx.lineTo(size, i * step);
-      ctx.stroke();
-    }
-    // accent major lines
-    ctx.strokeStyle = "rgba(56, 189, 248, 0.22)";
-    ctx.lineWidth = 2.5;
-    for (let i = 0; i <= 24; i += 6) {
-      ctx.beginPath();
-      ctx.moveTo(i * step, 0);
-      ctx.lineTo(i * step, size);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, i * step);
-      ctx.lineTo(size, i * step);
-      ctx.stroke();
-    }
-    const tex = new THREE.CanvasTexture(canvas);
-    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(6, 6);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    return tex;
-  }, []);
-
   return (
     <>
-      {/* environment map for reflections */}
       <primitive object={envMap} attach="environment" />
 
-      {/* deep atmospheric background */}
-      <color attach="background" args={["#08090c"]} />
-      <fog attach="fog" args={["#08090c", 28, 85]} />
+      {/* Sky dome */}
+      <mesh>
+        <sphereGeometry args={[200, 32, 16]} />
+        <meshBasicMaterial map={skyTexture} side={THREE.BackSide} fog={false} />
+      </mesh>
 
-      {/* three-point lighting */}
-      <ambientLight intensity={0.35} color="#94a3b8" />
-      <hemisphereLight args={["#475569", "#020617", 0.4]} />
+      {/* Soft fog for depth — matches the horizon haze */}
+      <fog attach="fog" args={["#8a8a7a", 40, 120]} />
 
-      {/* key light — warm-white, top-front-right */}
+      {/* Lighting — warm low sun + cool sky fill, like real outdoor industrial */}
+      <ambientLight intensity={0.5} color="#a0a8b0" />
+      <hemisphereLight args={["#8a8a7a", "#4a4540", 0.6]} />
+      {/* Warm low-angle sun */}
       <directionalLight
-        position={[14, 22, 10]}
-        intensity={1.8}
-        color="#fef3c7"
+        position={[30, 18, -20]}
+        intensity={1.4}
+        color="#ffd9a0"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-35}
-        shadow-camera-right={35}
-        shadow-camera-top={35}
-        shadow-camera-bottom={-35}
+        shadow-camera-left={-40}
+        shadow-camera-right={40}
+        shadow-camera-top={40}
+        shadow-camera-bottom={-40}
         shadow-camera-near={0.5}
-        shadow-camera-far={80}
+        shadow-camera-far={100}
         shadow-bias={-0.0005}
       />
-      {/* fill light — cool sky-blue, opposite side */}
-      <directionalLight position={[-12, 14, -8]} intensity={0.7} color="#7dd3fc" />
-      {/* rim light — violet, behind */}
-      <directionalLight position={[0, 8, -18]} intensity={0.6} color="#a78bfa" />
-      {/* subtle ground bounce */}
-      <pointLight position={[0, 0.5, 0]} intensity={0.3} color="#38bdf8" distance={20} />
+      {/* Cool sky fill from opposite side */}
+      <directionalLight position={[-20, 10, 15]} intensity={0.4} color="#a0b0c0" />
     </>
   );
 }
 
 export function Ground() {
+  const concreteTexture = useMemo(() => {
+    const size = 512;
+    const canvas = document.createElement("canvas");
+    canvas.width = size;
+    canvas.height = size;
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#6b6960";
+    ctx.fillRect(0, 0, size, size);
+    const imageData = ctx.getImageData(0, 0, size, size);
+    const data = imageData.data;
+    for (let i = 0; i < data.length; i += 4) {
+      const noise = (Math.random() - 0.5) * 30;
+      data[i] = Math.max(0, Math.min(255, data[i] + noise));
+      data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
+      data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
+    }
+    ctx.putImageData(imageData, 0, 0);
+    ctx.strokeStyle = "rgba(40, 38, 33, 0.6)";
+    ctx.lineWidth = 3;
+    for (let i = 0; i <= 4; i++) {
+      const p = (i / 4) * size;
+      ctx.beginPath();
+      ctx.moveTo(p, 0);
+      ctx.lineTo(p, size);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, p);
+      ctx.lineTo(size, p);
+      ctx.stroke();
+    }
+    for (let i = 0; i < 8; i++) {
+      const x = Math.random() * size;
+      const y = Math.random() * size;
+      const r = 10 + Math.random() * 30;
+      const stainGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
+      stainGrad.addColorStop(0, "rgba(30, 28, 25, 0.3)");
+      stainGrad.addColorStop(1, "rgba(30, 28, 25, 0)");
+      ctx.fillStyle = stainGrad;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const tex = new THREE.CanvasTexture(canvas);
+    tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+    tex.repeat.set(20, 20);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    return tex;
+  }, []);
+
   return (
     <group>
-      {/* polished dark floor */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.01, 0]} receiveShadow>
+      {/* Concrete ground */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[300, 300]} />
-        <meshStandardMaterial
-          color="#0b1220"
-          metalness={0.6}
-          roughness={0.45}
-        />
-      </mesh>
-      {/* grid overlay */}
-      <gridHelper
-        args={[120, 60, "#38bdf8", "#1e293b"]}
-        position={[0, 0.01, 0]}
-      />
-      {/* accent platform ring */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[18, 18.5, 96]} />
-        <meshBasicMaterial color="#38bdf8" transparent opacity={0.4} side={THREE.DoubleSide} />
-      </mesh>
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0.02, 0]}>
-        <ringGeometry args={[19, 19.15, 96]} />
-        <meshBasicMaterial color="#a78bfa" transparent opacity={0.25} side={THREE.DoubleSide} />
+        <meshStandardMaterial map={concreteTexture} roughness={0.9} metalness={0.05} />
       </mesh>
     </group>
   );
 }
 
+/** Distant industrial backdrop — silos, buildings, stacks to fill the horizon */
+export function IndustrialBackdrop() {
+  return (
+    <group>
+      {/* Distant building blocks */}
+      {[
+        { x: -60, z: -50, w: 20, h: 12, d: 15 },
+        { x: -35, z: -65, w: 15, h: 18, d: 12 },
+        { x: 40, z: -60, w: 25, h: 10, d: 18 },
+        { x: 65, z: -45, w: 18, h: 15, d: 14 },
+        { x: -70, z: 30, w: 16, h: 14, d: 20 },
+        { x: 70, z: 40, w: 22, h: 12, d: 16 },
+      ].map((b, i) => (
+        <mesh key={i} position={[b.x, b.h / 2, b.z]} castShadow>
+          <boxGeometry args={[b.w, b.h, b.d]} />
+          <meshStandardMaterial color="#3a3d42" roughness={0.85} metalness={0.1} />
+        </mesh>
+      ))}
+      {/* Distant silos */}
+      {[
+        { x: -50, z: -55, r: 4, h: 20 },
+        { x: -44, z: -52, r: 3.5, h: 18 },
+        { x: 50, z: -55, r: 4, h: 22 },
+        { x: 56, z: -50, r: 3, h: 16 },
+      ].map((s, i) => (
+        <group key={i}>
+          <mesh position={[s.x, s.h / 2, s.z]} castShadow>
+            <cylinderGeometry args={[s.r, s.r, s.h, 20]} />
+            <meshStandardMaterial color="#9ca3af" roughness={0.6} metalness={0.4} />
+          </mesh>
+          <mesh position={[s.x, s.h + s.r * 0.3, s.z]}>
+            <sphereGeometry args={[s.r, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
+            <meshStandardMaterial color="#b0b6bd" roughness={0.5} metalness={0.4} />
+          </mesh>
+        </group>
+      ))}
+      {/* Distant stacks */}
+      {[
+        { x: -25, z: -70, h: 25 },
+        { x: -20, z: -72, h: 22 },
+        { x: 25, z: -68, h: 28 },
+      ].map((s, i) => (
+        <group key={i}>
+          <mesh position={[s.x, s.h / 2, s.z]} castShadow>
+            <cylinderGeometry args={[1.2, 1.5, s.h, 16]} />
+            <meshStandardMaterial color="#6b7280" roughness={0.7} metalness={0.3} />
+          </mesh>
+          <mesh position={[s.x, s.h, s.z]}>
+            <cylinderGeometry args={[1.5, 1.5, 0.5, 16]} />
+            <meshStandardMaterial color="#4b5563" roughness={0.7} />
+          </mesh>
+        </group>
+      ))}
+    </group>
+  );
+}
+
+/**
+ * Structural steel elements — pipe racks, equipment platforms, foundations.
+ * These make the plant look like a real facility, not floating equipment.
+ */
+export function SteelStructure() {
+  return (
+    <group>
+      {/* Equipment concrete foundations/pads under each major piece */}
+      {/* These are rendered by the Equipment component via the Foundation sub-component */}
+
+      {/* Main pipe rack running through the plant center */}
+      <PipeRack startX={-14} endX={14} z={0} />
+
+      {/* Perimeter safety bollards (yellow) around equipment zones */}
+      {/* Simple visual markers */}
+    </group>
+  );
+}
+
+function PipeRack({ startX, endX, z }: { startX: number; endX: number; z: number }) {
+  const length = endX - startX;
+  const bayLength = 5;
+  const bays = Math.floor(length / bayLength);
+  const steelMat = (
+    <meshStandardMaterial color="#f59e0b" roughness={0.6} metalness={0.3} />
+  );
+
+  return (
+    <group>
+      {/* Vertical support columns at each bay */}
+      {Array.from({ length: bays + 1 }).map((_, i) => {
+        const x = startX + i * bayLength;
+        return (
+          <group key={i}>
+            {/* Left column */}
+            <mesh position={[x, 3, z - 2]} castShadow>
+              <boxGeometry args={[0.3, 6, 0.3]} />
+              {steelMat}
+            </mesh>
+            {/* Right column */}
+            <mesh position={[x, 3, z + 2]} castShadow>
+              <boxGeometry args={[0.3, 6, 0.3]} />
+              {steelMat}
+            </mesh>
+            {/* Cross bracing (vertical plane) */}
+            <mesh position={[x, 5, z]}>
+              <boxGeometry args={[0.15, 0.5, 4]} />
+              {steelMat}
+            </mesh>
+          </group>
+        );
+      })}
+      {/* Horizontal beams at top — two levels */}
+      <mesh position={[(startX + endX) / 2, 6, z - 2]} castShadow>
+        <boxGeometry args={[length + 0.5, 0.4, 0.4]} />
+        {steelMat}
+      </mesh>
+      <mesh position={[(startX + endX) / 2, 6, z + 2]} castShadow>
+        <boxGeometry args={[length + 0.5, 0.4, 0.4]} />
+        {steelMat}
+      </mesh>
+      {/* Lower level beams */}
+      <mesh position={[(startX + endX) / 2, 3.5, z - 2]} castShadow>
+        <boxGeometry args={[length + 0.5, 0.3, 0.3]} />
+        {steelMat}
+      </mesh>
+      <mesh position={[(startX + endX) / 2, 3.5, z + 2]} castShadow>
+        <boxGeometry args={[length + 0.5, 0.3, 0.3]} />
+        {steelMat}
+      </mesh>
+    </group>
+  );
+}
+
+/** A concrete equipment foundation pad — placed under each equipment */
+export function Foundation({ position, size = 2.5 }: { position: [number, number, number]; size?: number }) {
+  return (
+    <mesh position={[position[0], 0.08, position[2]]} receiveShadow>
+      <boxGeometry args={[size, 0.16, size]} />
+      <meshStandardMaterial color="#5a5852" roughness={0.95} metalness={0.02} />
+    </mesh>
+  );
+}
+
 export function Lighting() {
-  // kept for backwards compatibility — Environment is the new entry point
   return <Environment />;
 }

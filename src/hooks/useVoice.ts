@@ -28,7 +28,7 @@ export function useVoice(options: UseVoiceOptions = {}) {
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interim, setInterim] = useState("");
-  const [handsFree, setHandsFree] = useState(false);
+  const [handsFree, setHandsFree] = useState(true); // DEFAULT ON — zero friction
   const [supported] = useState<{ recognition: boolean; synthesis: boolean }>(() => {
     if (typeof window === "undefined") return { recognition: false, synthesis: false };
     const SR =
@@ -55,6 +55,14 @@ export function useVoice(options: UseVoiceOptions = {}) {
 
   useEffect(() => {
     handsFreeRef.current = handsFree;
+  }, [handsFree]);
+
+  // Auto-start listening when a plant is loaded (hands-free is on by default)
+  // This is triggered by the VoiceButton component which has access to currentPlant
+  useEffect(() => {
+    if (!handsFree) return;
+    // Don't auto-start here — the VoiceButton will call startListening
+    // when the plant loads. This effect just keeps the ref in sync.
   }, [handsFree]);
 
   // ─── Speech recognition setup ───

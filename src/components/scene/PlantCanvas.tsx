@@ -7,7 +7,7 @@ import { useAppStore } from "@/lib/store/useAppStore";
 import { Equipment } from "./Equipment";
 import { PipeNetwork } from "./PipeNetwork";
 import { CameraRig } from "./CameraRig";
-import { Environment, Ground } from "./Environment";
+import { Environment, Ground, IndustrialBackdrop, Foundation } from "./Environment";
 import { CameraController } from "./CameraController";
 
 export function PlantCanvas() {
@@ -24,15 +24,20 @@ export function PlantCanvas() {
         antialias: true,
         powerPreference: "high-performance",
         toneMapping: 2, // ACESFilmicToneMapping
-        toneMappingExposure: 1.05,
+        toneMappingExposure: 1.1,
       }}
     >
       <Suspense fallback={null}>
         <Environment />
         <Ground />
+        <IndustrialBackdrop />
         <CameraController />
         {currentPlant && (
           <>
+            {/* Concrete foundations under each equipment */}
+            {currentPlant.equipment.map((eq) => (
+              <Foundation key={`f-${eq.id}`} position={eq.position} size={getFoundationSize(eq.type)} />
+            ))}
             <PipeNetwork equipment={currentPlant.equipment} pipes={currentPlant.pipes} />
             {currentPlant.equipment.map((eq) => (
               <Equipment key={eq.id} equipment={eq} />
@@ -45,4 +50,33 @@ export function PlantCanvas() {
       <PerspectiveCamera makeDefault position={[8, 12, 18]} fov={50} near={0.1} far={400} />
     </Canvas>
   );
+}
+
+function getFoundationSize(type: string): number {
+  switch (type) {
+    case "storageTank":
+      return 3.5;
+    case "tank":
+      return 2.5;
+    case "reactor":
+    case "column":
+      return 2.2;
+    case "compressor":
+      return 4.0;
+    case "heatExchanger":
+    case "cooler":
+    case "heater":
+      return 3.0;
+    case "separator":
+      return 2.0;
+    case "filter":
+      return 2.0;
+    case "pump":
+    case "motor":
+      return 2.2;
+    case "valve":
+      return 1.2;
+    default:
+      return 2.0;
+  }
 }

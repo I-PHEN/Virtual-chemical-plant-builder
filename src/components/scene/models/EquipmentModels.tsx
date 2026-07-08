@@ -25,53 +25,51 @@ function useMaterials(color: string, emphasized?: boolean, dimmed?: boolean) {
     const c = new THREE.Color(color);
     const base = new THREE.MeshStandardMaterial({
       color: c,
-      metalness: 0.72,
-      roughness: 0.32,
+      metalness: 0.4,
+      roughness: 0.55,
       transparent: dimmed ?? false,
       opacity: dimmed ? 0.16 : 1,
       emissive: c,
-      emissiveIntensity: emphasized ? 0.5 : 0.04,
+      emissiveIntensity: emphasized ? 0.15 : 0,
     });
     const steel = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#525659"),
-      metalness: 0.92,
-      roughness: 0.28,
+      color: new THREE.Color("#6b7280"),
+      metalness: 0.75,
+      roughness: 0.4,
       transparent: dimmed ?? false,
       opacity: dimmed ? 0.16 : 1,
     });
     const darkSteel = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#2a2d31"),
-      metalness: 0.88,
-      roughness: 0.35,
+      color: new THREE.Color("#374151"),
+      metalness: 0.7,
+      roughness: 0.45,
       transparent: dimmed ?? false,
       opacity: dimmed ? 0.16 : 1,
     });
     const accent = new THREE.MeshStandardMaterial({
-      color: new THREE.Color(emphasized ? "#fbbf24" : "#cbd5e1"),
-      metalness: 0.7,
-      roughness: 0.25,
+      color: new THREE.Color(emphasized ? "#fbbf24" : "#d1d5db"),
+      metalness: 0.5,
+      roughness: 0.4,
       transparent: dimmed ?? false,
       opacity: dimmed ? 0.16 : 1,
       emissive: new THREE.Color(emphasized ? "#fbbf24" : "#000000"),
-      emissiveIntensity: emphasized ? 0.45 : 0,
+      emissiveIntensity: emphasized ? 0.25 : 0,
     });
     const glass = new THREE.MeshStandardMaterial({
       color: c,
       metalness: 0.1,
-      roughness: 0.08,
+      roughness: 0.15,
       transparent: true,
-      opacity: dimmed ? 0.05 : 0.32,
+      opacity: dimmed ? 0.05 : 0.4,
       emissive: c,
-      emissiveIntensity: emphasized ? 0.6 : 0.18,
+      emissiveIntensity: emphasized ? 0.3 : 0.08,
     });
     const hazard = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#f59e0b"),
-      metalness: 0.4,
-      roughness: 0.5,
+      metalness: 0.3,
+      roughness: 0.55,
       transparent: dimmed ?? false,
       opacity: dimmed ? 0.16 : 1,
-      emissive: new THREE.Color("#f59e0b"),
-      emissiveIntensity: emphasized ? 0.3 : 0.05,
     });
     return { base, steel, darkSteel, accent, glass, hazard };
   }, [color, emphasized, dimmed]);

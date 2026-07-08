@@ -10,18 +10,10 @@ interface PipeNetworkProps {
   pipes: PipeSegment[];
 }
 
-const STREAM_COLORS: Record<string, string> = {
-  feed: "#38bdf8",
-  product: "#fbbf24",
-  intermediate: "#a78bfa",
-  "utility-hot": "#f87171",
-  "utility-cold": "#22d3ee",
-};
-
 /**
- * Renders every pipe as a TubeGeometry following a polyline that gently arcs
- * between two equipment positions. Animated bright dots flow along each pipe
- * to indicate direction.
+ * Realistic industrial pipe network.
+ * Pipes are steel-grey with flanges at endpoints and subtle flow indicators
+ * (small dark spheres moving inside the pipe) instead of glowing colored dots.
  */
 export function PipeNetwork({ equipment, pipes }: PipeNetworkProps) {
   const byId = useMemo(() => {
@@ -36,8 +28,7 @@ export function PipeNetwork({ equipment, pipes }: PipeNetworkProps) {
         const fromEq = byId.get(p.from);
         const toEq = byId.get(p.to);
         if (!fromEq || !toEq) return null;
-        const color = STREAM_COLORS[p.stream ?? "intermediate"] ?? STREAM_COLORS.intermediate;
-        return <Pipe key={p.id} from={fromEq} to={toEq} pipe={p} color={color} />;
+        return <Pipe key={p.id} from={fromEq} to={toEq} pipe={p} />;
       })}
     </group>
   );
@@ -46,73 +37,86 @@ export function PipeNetwork({ equipment, pipes }: PipeNetworkProps) {
 function Pipe({
   from,
   to,
-  pipe,
-  color,
 }: {
   from: EquipmentInstance;
   to: EquipmentInstance;
   pipe: PipeSegment;
-  color: string;
 }) {
-  const dotsRef = useRef<THREE.InstancedMesh>(null);
+  const flowRef = useRef<THREE.InstancedMesh>(null);
 
   const curve = useMemo(() => {
-    const start: THREE.Vector3 = new THREE.Vector3(...from.position);
-    const end: THREE.Vector3 = new THREE.Vector3(...to.position);
+    const start: THREE.Vector3 = new THREE.Vector3(from.position[0], 1.2, from.position[2]);
+    const end: THREE.Vector3 = new THREE.Vector3(to.position[0], 1.2, to.position[2]);
     const mid = new THREE.Vector3().addVectors(start, end).multiplyScalar(0.5);
     const dist = start.distanceTo(end);
-    mid.y += Math.min(1.0, dist * 0.16);
+    // Slight arc — pipes in real plants run along pipe racks at a consistent height
+    mid.y = 1.2 + Math.min(0.8, dist * 0.1);
     return new THREE.CatmullRomCurve3([start, mid, end]);
   }, [from.position, to.position]);
 
   const geometry = useMemo(() => {
-    return new THREE.TubeGeometry(curve, 48, 0.09, 12, false);
+    return new THREE.TubeGeometry(curve, 48, 0.1, 12, false);
   }, [curve]);
 
-  const dotCount = 6;
+  const flowCount = 4;
   const dummy = useMemo(() => new THREE.Object3D(), []);
-  const colorObj = useMemo(() => new THREE.Color(color), [color]);
 
+  // Subtle flow indicator — dark spheres moving inside the pipe
   useFrame((state) => {
-    if (!dotsRef.current) return;
+    if (!flowRef.current) return;
     const t = state.clock.elapsedTime;
-    for (let i = 0; i < dotCount; i++) {
-      const phase = ((t * 0.32 + i / dotCount) % 1);
+    for (let i = 0; i < flowCount; i++) {
+      const phase = ((t * 0.25 + i / flowCount) % 1);
       const p = curve.getPointAt(phase);
       dummy.position.copy(p);
-      const scale = 0.85 + Math.sin(phase * Math.PI) * 0.35;
-      dummy.scale.setScalar(scale);
+      dummy.scale.setScalar(0.6);
       dummy.updateMatrix();
-      dotsRef.current.setMatrixAt(i, dummy.matrix);
+      flowRef.current.setMatrixAt(i, dummy.matrix);
     }
-    dotsRef.current.instanceMatrix.needsUpdate = true;
+    flowRef.current.instanceMatrix.needsUpdate = true;
   });
+
+  const flangePositions = useMemo(() => {
+    return [curve.getPointAt(0.02), curve.getPointAt(0.98)];
+  }, [curve]);
 
   return (
     <group>
-      {/* pipe wall — metallic steel */}
+      {/* Main pipe — industrial steel */}
       <mesh geometry={geometry} castShadow>
         <meshStandardMaterial
-          color="#475569"
-          metalness={0.85}
-          roughness={0.35}
+          color="#5a5e63"
+          metalness={0.8}
+          roughness={0.4}
         />
       </mesh>
-      {/* colored inner glow following the stream color */}
-      <mesh geometry={geometry}>
-        <meshBasicMaterial color={color} transparent opacity={0.22} toneMapped={false} />
+      {/* Subtle highlight stripe along the top of the pipe */}
+      <mesh geometry={geometry} scale={[1, 1.02, 1.02]}>
+        <meshStandardMaterial
+          color="#7a7e83"
+          metalness={0.7}
+          roughness={0.35}
+          transparent
+          opacity={0.5}
+        />
       </mesh>
-      {/* animated flow particles */}
-      <instancedMesh ref={dotsRef} args={[undefined, undefined, dotCount]}>
-        <sphereGeometry args={[0.12, 14, 14]} />
-        <meshBasicMaterial color={colorObj} toneMapped={false} />
+      {/* Flanges at both ends */}
+      {flangePositions.map((pos, i) => (
+        <mesh key={i} position={pos} castShadow>
+          <cylinderGeometry args={[0.18, 0.18, 0.08, 16]} />
+          <meshStandardMaterial color="#4a4e53" metalness={0.8} roughness={0.4} />
+        </mesh>
+      ))}
+      {/* Pipe support at midpoint — steel post going to ground */}
+      <mesh position={[curve.getPointAt(0.5).x, 0.6, curve.getPointAt(0.5).z]} castShadow>
+        <boxGeometry args={[0.12, 1.2, 0.12]} />
+        <meshStandardMaterial color="#3a3d42" metalness={0.6} roughness={0.5} />
+      </mesh>
+      {/* Flow indicator — subtle dark spheres inside the pipe */}
+      <instancedMesh ref={flowRef} args={[undefined, undefined, flowCount]}>
+        <sphereGeometry args={[0.07, 8, 8]} />
+        <meshStandardMaterial color="#2a2d31" metalness={0.3} roughness={0.6} />
       </instancedMesh>
-
-      {/* midpoint marker dot */}
-      <mesh position={curve.getPointAt(0.5)}>
-        <sphereGeometry args={[0.06, 8, 8]} />
-        <meshBasicMaterial color={color} toneMapped={false} />
-      </mesh>
     </group>
   );
 }

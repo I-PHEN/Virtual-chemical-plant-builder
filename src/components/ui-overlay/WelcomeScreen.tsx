@@ -34,11 +34,10 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
   };
 
   return (
-    <div className="absolute inset-0 z-30 flex h-screen items-center justify-center overflow-hidden bg-[#08090c] px-6">
+    <div className="absolute inset-0 z-30 flex h-screen items-center justify-center overflow-hidden bg-[#3a4555] px-6">
       {/* restrained background — single subtle vignette, no busy gradients */}
       <div className="pointer-events-none absolute inset-0">
-        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,_rgba(20,24,32,0.6),_transparent_70%)]" />
-        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.015)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.015)_1px,transparent_1px)] bg-[size:64px_64px]" />
+        <div className="absolute inset-0 bg-[radial-gradient(ellipse_60%_50%_at_50%_40%,_rgba(20,24,32,0.4),_transparent_70%)]" />
       </div>
 
       <div className="relative z-10 w-full max-w-xl">

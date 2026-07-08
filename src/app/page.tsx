@@ -63,7 +63,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-[#08090c] text-white">
+    <main className="relative h-screen w-screen overflow-hidden bg-[#5a6573] text-white">
       {/* 3D scene fills the screen */}
       <div className="absolute inset-0">
         <PlantCanvas />

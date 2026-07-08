@@ -39,6 +39,17 @@ export function VoiceButton({ onTranscript }: VoiceButtonProps) {
     setAssistantSpeaking(isSpeaking);
   }, [isSpeaking, setAssistantSpeaking]);
 
+  // AUTO-START listening when a plant loads — zero friction, just talk
+  useEffect(() => {
+    if (currentPlant && handsFree && supported.recognition) {
+      // Small delay to let the intro start speaking first, then start listening
+      const timer = setTimeout(() => {
+        startListening();
+      }, 1500);
+      return () => clearTimeout(timer);
+    }
+  }, [currentPlant, handsFree, supported.recognition, startListening]);
+
   const handleMicClick = useCallback(() => {
     if (!supported.recognition) {
       toast.error("Voice input needs Chrome or Edge. You can still type.");
