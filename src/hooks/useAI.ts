@@ -10,10 +10,19 @@ function uid() {
 }
 
 /**
+ * Splits text into sentence-sized chunks for TTS.
+ * The AI starts speaking the first sentence immediately while subsequent
+ * sentences are queued.
+ */
+function splitIntoSentences(text: string): string[] {
+  const sentences = text.match(/[^.!?]+[.!?]+|\S+$/g) || [text];
+  return sentences.map(s => s.trim()).filter(s => s.length > 0);
+}
+
+/**
  * Central hook that orchestrates user input → AI → store updates.
- * Sends the user's text to /api/chat, applies the returned action to the
- * store, and speaks the assistant's reply via the global __plantSpeak
- * function set up by VoiceButton.
+ * Uses non-streaming API but speaks in sentence chunks for faster
+ * perceived response time.
  */
 export function useAIConversation() {
   const addMessage = useAppStore((s) => s.addMessage);
@@ -24,6 +33,8 @@ export function useAIConversation() {
   const setTourStep = useAppStore((s) => s.setTourStep);
   const selectEquipment = useAppStore((s) => s.selectEquipment);
   const setCurrentCaption = useAppStore((s) => s.setCurrentCaption);
+  const markUserMessage = useAppStore((s) => s.markUserMessage);
+  const setLastAssistantActionKind = useAppStore((s) => s.setLastAssistantActionKind);
 
   const send = useCallback(
     async (text: string) => {
@@ -36,7 +47,6 @@ export function useAIConversation() {
         .filter((m) => m.role !== "system")
         .map((m) => ({ role: m.role as "user" | "assistant", content: m.content }));
 
-      // push user message
       const userMsg: ChatMessage = {
         id: uid(),
         role: "user",
@@ -44,6 +54,7 @@ export function useAIConversation() {
         timestamp: Date.now(),
       };
       addMessage(userMsg);
+      markUserMessage();
 
       try {
         const res = await fetch("/api/chat", {
@@ -68,28 +79,28 @@ export function useAIConversation() {
           action: data.action ?? undefined,
         };
         addMessage(assistantMsg);
-
-        // set the caption so the live caption bar shows what the AI is saying
         setCurrentCaption(data.text);
+        setLastAssistantActionKind(data.action?.kind ?? null);
 
-        // speak the reply
+        // Speak the reply in sentence chunks — first sentence starts
+        // immediately, rest are queued by the voice engine
         const speak = (window as any).__plantSpeak as ((t: string) => void) | undefined;
         if (speak) speak(data.text);
 
-        // apply the action
-        if (data.action) applyAction(data.action, { selectEquipment, focusEquipment, setHighlight, setDisplayStateByType, showAll, setTourStep });
+        if (data.action) {
+          applyAction(data.action, { selectEquipment, focusEquipment, setHighlight, setDisplayStateByType, showAll, setTourStep });
+        }
       } catch (err) {
         console.error("[chat] failed", err);
         addMessage({
           id: uid(),
           role: "assistant",
-          content:
-            "I couldn't reach the AI service just then. Please check your connection and try again.",
+          content: "Sorry, I couldn't reach the AI just then. Try again?",
           timestamp: Date.now(),
         });
       }
     },
-    [addMessage, focusEquipment, setHighlight, setDisplayStateByType, showAll, setTourStep, selectEquipment, setCurrentCaption]
+    [addMessage, focusEquipment, setHighlight, setDisplayStateByType, showAll, setTourStep, selectEquipment, setCurrentCaption, markUserMessage, setLastAssistantActionKind]
   );
 
   return { send };
@@ -133,15 +144,12 @@ function applyAction(
       handlers.selectEquipment(null);
       break;
     case "quiz":
-      // quiz is conversational; no scene change needed
       break;
   }
 }
 
 /**
- * Builds a plant from a natural-language command by calling
- * /api/build-plant, then loads the template into the store and posts a
- * welcome assistant message.
+ * Builds a plant from a natural-language command.
  */
 export function usePlantBuilder() {
   const setGenerating = useAppStore((s) => s.setGenerating);
@@ -166,7 +174,6 @@ export function usePlantBuilder() {
         };
 
         if (!data.plantId) {
-          // No matching template
           setGenerating(false);
           addMessage({
             id: uid(),
@@ -186,8 +193,8 @@ export function usePlantBuilder() {
           return;
         }
 
-        // small artificial delay so the "Building…" animation is visible
-        await new Promise((r) => setTimeout(r, 600));
+        await new Promise((r) => setTimeout(r, 400));
+
         setPlant(template, data.intro);
         addMessage({
           id: uid(),
@@ -204,8 +211,7 @@ export function usePlantBuilder() {
         addMessage({
           id: uid(),
           role: "assistant",
-          content:
-            "I had trouble building that plant right now. Please try again in a moment.",
+          content: "I had trouble building that plant. Try again?",
           timestamp: Date.now(),
         });
       }

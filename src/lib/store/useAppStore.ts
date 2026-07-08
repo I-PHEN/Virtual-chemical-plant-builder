@@ -23,8 +23,11 @@ interface AppState {
 
   // Tour
   tourStep: number | null;
-  /** Whether the tour should auto-advance when the AI finishes speaking */
   tourAutoAdvance: boolean;
+  /** What kind of action the last assistant reply included (for tour logic) */
+  lastAssistantActionKind: string | null;
+  /** Timestamp of the last user message (for tour pause logic) */
+  lastUserMessageAt: number;
 
   // Chat
   messages: ChatMessage[];
@@ -47,6 +50,8 @@ interface AppState {
   showAll: () => void;
   setTourStep: (step: number | null) => void;
   setTourAutoAdvance: (v: boolean) => void;
+  setLastAssistantActionKind: (kind: string | null) => void;
+  markUserMessage: () => void;
   addMessage: (msg: ChatMessage) => void;
   clearMessages: () => void;
   setAssistantSpeaking: (v: boolean) => void;
@@ -69,6 +74,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   tourStep: null,
   tourAutoAdvance: true,
+  lastAssistantActionKind: null,
+  lastUserMessageAt: 0,
 
   messages: [],
   isAssistantSpeaking: false,
@@ -90,6 +97,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       highlightType: null,
       tourStep: null,
       tourAutoAdvance: true,
+      lastAssistantActionKind: null,
+      lastUserMessageAt: 0,
       messages: [],
     }),
 
@@ -142,6 +151,8 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setTourStep: (step) => set({ tourStep: step }),
   setTourAutoAdvance: (v) => set({ tourAutoAdvance: v }),
+  setLastAssistantActionKind: (kind) => set({ lastAssistantActionKind: kind }),
+  markUserMessage: () => set({ lastUserMessageAt: Date.now() }),
 
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
 
@@ -167,6 +178,8 @@ export const useAppStore = create<AppState>((set, get) => ({
       highlightType: null,
       tourStep: null,
       tourAutoAdvance: true,
+      lastAssistantActionKind: null,
+      lastUserMessageAt: 0,
       messages: [],
       currentCaption: "",
       captionProgress: 0,

@@ -63,6 +63,43 @@ export interface PipeSegment {
   label?: string;
   /** Visual color of the stream (e.g. feed, product, utility) */
   stream?: "feed" | "product" | "intermediate" | "utility-hot" | "utility-cold";
+  /** How the pipe is routed: "rack" (up to pipe rack, along, down) or "direct" (short arc) */
+  routing?: "rack" | "direct";
+  /** Which pipe rack corridor to use (if routing is "rack") */
+  rackId?: string;
+}
+
+/** A process area grouping equipment together (like a real plant plot plan) */
+export interface ProcessArea {
+  id: string;
+  name: string; // "Reactor Area", "Tank Farm"
+  kind: "process" | "storage" | "utility" | "control" | "flare";
+  /** Ground footprint of the area */
+  footprint: { x: number; z: number; width: number; depth: number };
+  /** Whether the area is bunded (surrounded by a low wall for spill containment) */
+  bunded?: boolean;
+  /** Equipment IDs that belong to this area */
+  equipmentIds: string[];
+}
+
+/** An elevated pipe rack corridor running between process areas */
+export interface PipeRackCorridor {
+  id: string;
+  from: { x: number; z: number };
+  to: { x: number; z: number };
+  /** Height of the rack (typically 6-8m) */
+  height: number;
+  /** Number of tier levels (1 or 2) */
+  levels: number;
+}
+
+/** Static structures in the plant (platforms, stairways, bunds, roads) */
+export interface Structure {
+  id: string;
+  kind: "platform" | "stairway" | "bund" | "road" | "fence";
+  position: [number, number, number];
+  size?: [number, number, number];
+  rotation?: number;
 }
 
 export interface ProcessStep {
@@ -83,6 +120,16 @@ export interface PlantTemplate {
   pipes: PipeSegment[];
   processOverview: string;
   processSteps: ProcessStep[];
+  /** Process areas grouping equipment (for realistic layout) */
+  areas?: ProcessArea[];
+  /** Elevated pipe rack corridors */
+  racks?: PipeRackCorridor[];
+  /** Static structures (platforms, stairways, bunds) */
+  structures?: Structure[];
+  /** Difficulty for landing screen display */
+  difficulty?: "Beginner" | "Intermediate" | "Advanced";
+  /** Estimated tour time in minutes */
+  estimatedTime?: number;
 }
 
 export type DisplayState = "visible" | "highlighted" | "hidden";

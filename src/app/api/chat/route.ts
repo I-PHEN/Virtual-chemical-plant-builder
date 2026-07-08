@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
 import { getPlantById } from "@/lib/plant/templates";
 import { buildSystemPrompt } from "@/lib/ai/systemPrompt";
+import { EQUIPMENT_LIBRARY } from "@/lib/plant/equipmentLibrary";
 import type { ChatMessage, EquipmentInstance, PlantTemplate, AssistantAction } from "@/lib/plant/types";
 
 export const runtime = "nodejs";
@@ -28,21 +29,34 @@ function resolveContext(body: ChatRequestBody): {
   return { plant, selectedEquipment };
 }
 
-/**
- * Extracts an action from the AI's text response if it mentioned one.
- * This is a fallback for when the model doesn't return clean JSON.
- */
+function getRelevantEquipmentMetadata(message: string, plant: PlantTemplate | null) {
+  if (!plant) return [];
+  const lower = message.toLowerCase();
+  const relevant = [];
+  for (const eq of plant.equipment) {
+    const meta = EQUIPMENT_LIBRARY[eq.type];
+    const eqName = eq.name.toLowerCase();
+    const eqType = eq.type.toLowerCase();
+    const singularName = meta.singularName.toLowerCase();
+    if (
+      lower.includes(eqName) ||
+      lower.includes(eqType) ||
+      lower.includes(singularName) ||
+      (lower.includes("this") && plant.equipment.find(e => e.id === eq.id))
+    ) {
+      relevant.push({ equipment: eq, meta });
+    }
+  }
+  return relevant;
+}
+
 function extractActionFromText(text: string, plant: PlantTemplate | null): AssistantAction | null {
   if (!plant) return null;
   const lower = text.toLowerCase();
-
-  // Check if the user asked to focus on a specific equipment
   for (const eq of plant.equipment) {
     const eqName = eq.name.toLowerCase();
     const eqType = eq.type.toLowerCase();
     if (lower.includes(eqName) || lower.includes(eqType)) {
-      // Don't auto-focus on every mention — only if it seems like the main topic
-      // (e.g. "let's go to", "take me to", "look at", "here's the")
       if (lower.includes("let's go") || lower.includes("take me") || lower.includes("look at") ||
           lower.includes("here's") || lower.includes("over to") || lower.includes("head over")) {
         return { kind: "focus", equipmentId: eq.id };
@@ -61,18 +75,19 @@ export async function POST(req: NextRequest) {
   }
 
   const { plant, selectedEquipment } = resolveContext(body);
+  const relevantEquipment = getRelevantEquipmentMetadata(body.message, plant);
+
   const systemPrompt = buildSystemPrompt({
     plant,
     selectedEquipment,
     tourStep: body.tourStep ?? null,
+    relevantEquipment,
   });
 
-  // Build messages — include more history for better conversation
   const conversation: { role: "system" | "user" | "assistant"; content: string }[] = [
     { role: "system", content: systemPrompt },
   ];
 
-  // Include up to 16 messages of history for better conversational context
   for (const m of body.history.slice(-16)) {
     conversation.push({ role: m.role, content: m.content });
   }
@@ -82,42 +97,36 @@ export async function POST(req: NextRequest) {
     const zai = await ZAI.create();
     const completion = await zai.chat.completions.create({
       messages: conversation,
-      temperature: 0.8, // higher = more natural, less robotic
-      max_tokens: 800,  // more room for detailed answers
+      temperature: 0.85,
+      max_tokens: 800,
       response_format: { type: "json_object" },
     });
 
     const raw = completion.choices[0]?.message?.content ?? "";
 
-    // Robust JSON parsing — try multiple approaches
     let parsed: { text?: string; action?: unknown } = {};
     let parseSuccess = false;
 
-    // Attempt 1: direct parse
     try {
       parsed = JSON.parse(raw);
       parseSuccess = true;
     } catch {
-      // Attempt 2: extract JSON from markdown fences or surrounding text
       const jsonMatch = raw.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
           parsed = JSON.parse(jsonMatch[0]);
           parseSuccess = true;
         } catch {
-          // Attempt 3: just use the raw text as the reply
+          // ignore
         }
       }
     }
 
-    // Determine the text to speak
     let text = "";
     if (typeof parsed.text === "string" && parsed.text.trim().length > 0) {
       text = parsed.text;
     } else if (!parseSuccess && raw.trim().length > 0) {
-      // If we couldn't parse JSON but got plain text, use it directly
       text = raw.replace(/```json|```/g, "").trim();
-      // If it still looks like JSON, try to extract just the text value
       try {
         const fallback = JSON.parse(text);
         if (typeof fallback.text === "string") text = fallback.text;
@@ -126,17 +135,14 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // Last resort fallback
     if (!text || text.trim().length === 0) {
       text = "Hmm, I lost my train of thought there. What were you saying?";
     }
 
-    // Determine the action
     let action: AssistantAction | null = null;
     if (parsed.action && typeof parsed.action === "object") {
       action = parsed.action as AssistantAction;
     } else if (!parseSuccess) {
-      // Try to infer an action from the text
       action = extractActionFromText(text, plant);
     }
 
