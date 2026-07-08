@@ -5,16 +5,24 @@ import { Volume2 } from "lucide-react";
 import { AnimatePresence, motion } from "framer-motion";
 
 /**
- * Live caption bar — shows what the AI is currently saying.
- * Compact, editorial, sits above the voice controls.
+ * Live caption bar — reveals the AI's speech word by word as it is spoken,
+ * like real subtitles. The spoken portion is bright; the not-yet-spoken
+ * portion is dimmed. Progress is driven by SpeechSynthesis boundary events.
  */
 export function CaptionBar() {
   const caption = useAppStore((s) => s.currentCaption);
+  const progress = useAppStore((s) => s.captionProgress);
   const isSpeaking = useAppStore((s) => s.isAssistantSpeaking);
   const currentPlant = useAppStore((s) => s.currentPlant);
 
   if (!currentPlant) return null;
   const show = isSpeaking && caption.trim().length > 0;
+
+  // Split the caption into spoken + remaining based on the character index
+  // reported by the boundary event.
+  const safeProgress = Math.max(0, Math.min(progress, caption.length));
+  const spoken = caption.slice(0, safeProgress);
+  const remaining = caption.slice(safeProgress);
 
   return (
     <div className="pointer-events-none absolute bottom-24 left-1/2 z-20 w-full max-w-xl -translate-x-1/2 px-4">
@@ -32,8 +40,15 @@ export function CaptionBar() {
               <div className="mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/10 ring-1 ring-sky-500/30">
                 <Volume2 className="h-2.5 w-2.5 animate-pulse text-sky-300" />
               </div>
-              <p className="text-[13px] leading-relaxed text-slate-200">
-                {caption}
+              <p className="text-[13px] leading-relaxed">
+                {/* Spoken portion — bright */}
+                {spoken.length > 0 && (
+                  <span className="text-slate-100">{spoken}</span>
+                )}
+                {/* Not-yet-spoken portion — dim, so the student can see what's coming */}
+                {remaining.length > 0 && (
+                  <span className="text-slate-600">{remaining}</span>
+                )}
               </p>
             </div>
             <div className="mt-1.5 flex items-center gap-1 pl-7">

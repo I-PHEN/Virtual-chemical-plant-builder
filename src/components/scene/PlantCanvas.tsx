@@ -40,7 +40,7 @@ export function PlantCanvas() {
         )}
       </Suspense>
 
-      <PerspectiveCamera makeDefault position={[0, 7, 20]} fov={45} near={0.1} far={400} />
+      <PerspectiveCamera makeDefault position={[8, 12, 18]} fov={50} near={0.1} far={400} />
     </Canvas>
   );
 }

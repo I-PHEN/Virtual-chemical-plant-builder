@@ -104,7 +104,8 @@ Reply with JSON only — no markdown, no commentary.`;
 }
 
 function buildIntro(name: string, overview: string): string {
-  // Short, spoken-style intro the voice AI says when the plant appears.
-  const firstSentence = overview.split(". ")[0] + ".";
-  return `Done. I've built the ${name} for you. ${firstSentence} Let's begin at the feed section — click any equipment, or ask me to take you through the plant.`;
+  // Conversational auto-intro the AI speaks the moment the plant loads.
+  // Short, warm, invites the student into the experience.
+  const shortName = name.split(" (")[0];
+  return `Hey, welcome! I've got the ${shortName} ready for you. I'm your AI process engineer — think of me as someone who's been working here for years. I can walk you through the whole thing, or you can just click anything that catches your eye and ask me about it. Want me to start from the beginning?`;
 }

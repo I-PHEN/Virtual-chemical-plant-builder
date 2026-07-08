@@ -10,13 +10,16 @@ import { useCallback, useEffect, useRef, useState } from "react";
  *  - Push-to-talk: tap mic, speak one utterance, mic auto-stops.
  *  - Hands-free: mic stays on continuously. Automatically pauses while
  *    the AI is speaking (so it doesn't hear itself) and resumes ~600ms
- *    after the AI finishes. This gives a natural conversational flow
- *    without the user ever pressing a button.
+ *    after the AI finishes.
+ *
+ * Captions: uses the `boundary` event from SpeechSynthesis to report
+ * word-by-word progress so the UI can reveal captions as words are
+ * spoken — like real subtitles.
  */
 
 interface UseVoiceOptions {
   onFinalTranscript?: (text: string) => void;
-  onAISpeakingChange?: (speaking: boolean) => void;
+  onCaptionProgress?: (charIndex: number) => void;
 }
 
 export function useVoice(options: UseVoiceOptions = {}) {
@@ -39,16 +42,17 @@ export function useVoice(options: UseVoiceOptions = {}) {
   const recognitionRef = useRef<any>(null);
   const finalTranscriptRef = useRef("");
   const onFinalRef = useRef(onFinalTranscript);
+  const onProgressRef = useRef<((charIndex: number) => void) | null>(null);
   const handsFreeRef = useRef(false);
   const aiSpeakingRef = useRef(false);
-  const wantListeningRef = useRef(false); // what the user wants
+  const wantListeningRef = useRef(false);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     onFinalRef.current = onFinalTranscript;
   }, [onFinalTranscript]);
 
-  // keep refs in sync
   useEffect(() => {
     handsFreeRef.current = handsFree;
   }, [handsFree]);
@@ -61,8 +65,8 @@ export function useVoice(options: UseVoiceOptions = {}) {
     if (!SR) return;
 
     const rec = new SR();
-    rec.continuous = true;       // keep listening across pauses
-    rec.interimResults = true;   // show partial transcripts
+    rec.continuous = true;
+    rec.interimResults = true;
     rec.lang = "en-US";
     rec.maxAlternatives = 1;
 
@@ -79,11 +83,9 @@ export function useVoice(options: UseVoiceOptions = {}) {
     };
 
     rec.onerror = (event: any) => {
-      // "no-speech" and "aborted" are normal in continuous mode — don't log noisy
       if (event.error !== "no-speech" && event.error !== "aborted") {
         console.warn("[voice] recognition error", event.error);
       }
-      // On errors like "network", we still try to restart if hands-free wants it
       if (event.error === "not-allowed" || event.error === "service-not-allowed") {
         wantListeningRef.current = false;
         setIsListening(false);
@@ -97,15 +99,13 @@ export function useVoice(options: UseVoiceOptions = {}) {
       finalTranscriptRef.current = "";
       if (final && onFinalRef.current) onFinalRef.current(final);
 
-      // Auto-restart if user wants to keep listening (hands-free) and AI is not speaking
       if (wantListeningRef.current && !aiSpeakingRef.current && handsFreeRef.current) {
-        // small delay to avoid tight loop
         restartTimerRef.current = setTimeout(() => {
           try {
             rec.start();
             setIsListening(true);
           } catch {
-            // already started or other transient issue — will retry on next cycle
+            // ignore
           }
         }, 250);
       }
@@ -143,7 +143,6 @@ export function useVoice(options: UseVoiceOptions = {}) {
     finalTranscriptRef.current = "";
     wantListeningRef.current = true;
     try {
-      // cancel any ongoing speech so the mic can hear clearly
       if (typeof window !== "undefined" && "speechSynthesis" in window) {
         window.speechSynthesis.cancel();
         setIsSpeaking(false);
@@ -151,8 +150,8 @@ export function useVoice(options: UseVoiceOptions = {}) {
       }
       recognitionRef.current.start();
       setIsListening(true);
-    } catch (e) {
-      // can throw if already started — that's fine
+    } catch {
+      // ignore
     }
   }, []);
 
@@ -171,7 +170,6 @@ export function useVoice(options: UseVoiceOptions = {}) {
     setHandsFree((prev) => {
       const next = !prev;
       if (next) {
-        // turn hands-free on → start listening
         if (recognitionRef.current) {
           finalTranscriptRef.current = "";
           wantListeningRef.current = true;
@@ -183,7 +181,6 @@ export function useVoice(options: UseVoiceOptions = {}) {
           }
         }
       } else {
-        // turn hands-free off → stop listening
         wantListeningRef.current = false;
         try {
           recognitionRef.current?.stop();
@@ -196,8 +193,8 @@ export function useVoice(options: UseVoiceOptions = {}) {
     });
   }, []);
 
-  // ─── Speaking control ───
-  const speak = useCallback((text: string) => {
+  // ─── Speaking control with word-boundary captions ───
+  const speak = useCallback((text: string, onProgress?: (charIndex: number) => void) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
     const clean = text
       .replace(/[*_`#>]/g, "")
@@ -206,7 +203,9 @@ export function useVoice(options: UseVoiceOptions = {}) {
     if (!clean) return;
     window.speechSynthesis.cancel();
 
-    // PAUSE the mic while speaking so it doesn't hear the AI
+    onProgressRef.current = onProgress ?? null;
+
+    // PAUSE the mic while speaking
     if (recognitionRef.current && wantListeningRef.current) {
       try {
         recognitionRef.current.stop();
@@ -217,13 +216,15 @@ export function useVoice(options: UseVoiceOptions = {}) {
     }
 
     const utter = new SpeechSynthesisUtterance(clean);
-    utter.rate = 1.02;
+    // Conversational tuning — slightly slower, natural pitch
+    utter.rate = 0.97;
     utter.pitch = 1.0;
     utter.volume = 1.0;
     const voices = window.speechSynthesis.getVoices();
+    // Prefer natural-sounding voices
     const preferred =
-      voices.find((v) => /en[-_]?US/i.test(v.lang) && /female|samantha|google|aria|jenny/i.test(v.name)) ||
-      voices.find((v) => /en[-_]?GB/i.test(v.lang) && /female|libby|sonia/i.test(v.name)) ||
+      voices.find((v) => /en[-_]?US/i.test(v.lang) && /google us english|samantha|aria|jenny|christopher|david/i.test(v.name)) ||
+      voices.find((v) => /en[-_]?GB/i.test(v.lang) && /libby|sonia|ryan/i.test(v.name)) ||
       voices.find((v) => /en[-_]?US/i.test(v.lang)) ||
       voices.find((v) => /^en/i.test(v.lang));
     if (preferred) utter.voice = preferred;
@@ -231,10 +232,25 @@ export function useVoice(options: UseVoiceOptions = {}) {
     utter.onstart = () => {
       setIsSpeaking(true);
       aiSpeakingRef.current = true;
+      // start at zero progress
+      if (onProgressRef.current) onProgressRef.current(0);
     };
+
+    // Word boundary — fires as each word is spoken. This is what gives us
+    // real word-by-word caption reveal.
+    utter.onboundary = (event: SpeechSynthesisEvent) => {
+      if (event.name === "word" || event.name === undefined) {
+        if (onProgressRef.current) {
+          onProgressRef.current(event.charIndex);
+        }
+      }
+    };
+
     utter.onend = () => {
       setIsSpeaking(false);
       aiSpeakingRef.current = false;
+      // make sure we show the full text at the end
+      if (onProgressRef.current) onProgressRef.current(clean.length);
       // RESUME listening after a short pause (hands-free flow)
       if (wantListeningRef.current && handsFreeRef.current) {
         restartTimerRef.current = setTimeout(() => {
@@ -252,7 +268,6 @@ export function useVoice(options: UseVoiceOptions = {}) {
     utter.onerror = () => {
       setIsSpeaking(false);
       aiSpeakingRef.current = false;
-      // also try to resume listening on error
       if (wantListeningRef.current && handsFreeRef.current) {
         restartTimerRef.current = setTimeout(() => {
           if (recognitionRef.current && wantListeningRef.current) {
@@ -266,6 +281,7 @@ export function useVoice(options: UseVoiceOptions = {}) {
         }, 500);
       }
     };
+    currentUtteranceRef.current = utter;
     window.speechSynthesis.speak(utter);
   }, []);
 

@@ -31,6 +31,8 @@ interface AppState {
   voiceEnabled: boolean;
   /** The text the AI is currently speaking (shown as a live caption) */
   currentCaption: string;
+  /** How many characters of the caption have been spoken so far (for word-by-word reveal) */
+  captionProgress: number;
 
   // Actions
   setPlant: (plant: PlantTemplate, intro: string) => void;
@@ -48,6 +50,7 @@ interface AppState {
   setListening: (v: boolean) => void;
   setVoiceEnabled: (v: boolean) => void;
   setCurrentCaption: (v: string) => void;
+  setCaptionProgress: (v: number) => void;
   resetPlant: () => void;
 }
 
@@ -68,6 +71,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   isListening: false,
   voiceEnabled: true,
   currentCaption: "",
+  captionProgress: 0,
 
   setPlant: (plant, intro) =>
     set({
@@ -139,11 +143,12 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setAssistantSpeaking: (v) => {
     set({ isAssistantSpeaking: v });
-    if (!v) set({ currentCaption: "" });
+    if (!v) set({ currentCaption: "", captionProgress: 0 });
   },
   setListening: (v) => set({ isListening: v }),
   setVoiceEnabled: (v) => set({ voiceEnabled: v }),
-  setCurrentCaption: (v) => set({ currentCaption: v }),
+  setCurrentCaption: (v) => set({ currentCaption: v, captionProgress: 0 }),
+  setCaptionProgress: (v) => set({ captionProgress: v }),
 
   resetPlant: () =>
     set({
@@ -157,6 +162,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       tourStep: null,
       messages: [],
       currentCaption: "",
+      captionProgress: 0,
     }),
 }));
 

@@ -17,20 +17,20 @@ interface CameraRigProps {
 }
 
 /**
- * Camera rig with clear ownership rules:
+ * Camera rig with strict ownership rules.
  *
- *  - MANUAL mode (default): the user has full control via OrbitControls.
- *    The rig never touches the camera. This is what the user expects.
+ * The user ALWAYS has priority. The rig only moves the camera when:
+ *  1. The AI explicitly focuses equipment or jumps to a tour step.
+ *  2. The user has NOT interacted with the camera since that action.
  *
- *  - CINEMATIC mode: triggered when the AI focuses on equipment or jumps
- *    to a tour step. The rig flies the camera to the target, then slowly
- *    orbits while the AI speaks. The moment the user grabs the camera
- *    (pointer down or wheel), cinematic mode ENDS immediately and control
- *    returns to the user. It does not resume on its own — only a new AI
- *    focus/tour action re-enters cinematic mode.
+ * The moment the user touches the camera (pointer down, wheel, touch,
+ * or even a right-click), ALL cinematic motion stops immediately and
+ * permanently until the next AI focus/tour action.
  *
- *  - IDLE drift: only when no plant is focused AND the user hasn't
- *    interacted yet. Stops the moment the user touches anything.
+ * Zoom is fully delegated to OrbitControls — the rig never touches
+ * camera.position.z in a way that would fight zoom. The rig only
+ * lerps position when in "flying" or "orbiting" mode, and both of
+ * those modes exit the instant the user interacts.
  */
 export function CameraRig({ equipment }: CameraRigProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -41,36 +41,40 @@ export function CameraRig({ equipment }: CameraRigProps) {
   const currentPlant = useAppStore((s) => s.currentPlant);
   const isAssistantSpeaking = useAppStore((s) => s.isAssistantSpeaking);
 
-  // Cinematic state
   const mode = useRef<"manual" | "flying" | "orbiting">("manual");
-  const targetPos = useRef(new THREE.Vector3(0, 7, 20));
+  const targetPos = useRef(new THREE.Vector3(8, 12, 18));
   const targetLook = useRef(new THREE.Vector3(0, 1, 0));
   const orbitCenter = useRef(new THREE.Vector3(0, 1, 0));
   const orbitAngle = useRef(0);
   const orbitRadius = useRef(8);
   const orbitHeight = useRef(4);
-  const orbitUntil = useRef(0); // timestamp when orbiting should stop
+  const orbitUntil = useRef(0);
   const idleTime = useRef(0);
   const userInteracted = useRef(false);
   const lastFocusId = useRef<string | null>(null);
   const lastTourStep = useRef<number | null>(null);
 
-  // Track manual interaction — immediately ends cinematic mode
+  // Track manual interaction on the canvas — IMMEDIATELY ends cinematic mode.
+  // Listen on both the canvas and the window to catch wheel events reliably
+  // (wheel events don't always fire on the canvas if a div is on top).
   useEffect(() => {
     const dom = gl.domElement;
     const onInteract = () => {
       userInteracted.current = true;
-      if (mode.current !== "manual") {
-        mode.current = "manual";
-      }
+      mode.current = "manual";
     };
     dom.addEventListener("pointerdown", onInteract);
     dom.addEventListener("wheel", onInteract, { passive: true });
     dom.addEventListener("touchstart", onInteract, { passive: true });
+    dom.addEventListener("contextmenu", onInteract);
+    // Also listen on window for wheel — sometimes the event target is a child
+    window.addEventListener("wheel", onInteract, { passive: true });
     return () => {
       dom.removeEventListener("pointerdown", onInteract);
       dom.removeEventListener("wheel", onInteract);
       dom.removeEventListener("touchstart", onInteract);
+      dom.removeEventListener("contextmenu", onInteract);
+      window.removeEventListener("wheel", onInteract);
     };
   }, [gl]);
 
@@ -121,7 +125,7 @@ export function CameraRig({ equipment }: CameraRigProps) {
     mode.current = "flying";
   }, [tourStep, currentPlant, equipment]);
 
-  // When focus/tour cleared, return to manual (no auto-reset of position)
+  // When focus/tour cleared, return to manual
   useEffect(() => {
     if (focusId === null && tourStep === null) {
       mode.current = "manual";
@@ -131,16 +135,19 @@ export function CameraRig({ equipment }: CameraRigProps) {
   }, [focusId, tourStep]);
 
   useFrame((_, delta) => {
-    // MANUAL mode — do nothing. User has full control via OrbitControls.
+    // MANUAL mode — do absolutely nothing to the camera. The user has
+    // full control via OrbitControls (orbit, pan, zoom). This is critical:
+    // never lerp position or target here, or zoom will feel broken.
     if (mode.current === "manual") {
-      // Gentle idle drift only if user has never interacted AND nothing is focused
+      // Gentle idle drift ONLY if the user has never interacted AND nothing
+      // is focused. Once they touch anything, this stops forever (until reload).
       if (!userInteracted.current && !focusId && tourStep === null) {
         idleTime.current += delta;
         const t = idleTime.current;
-        const driftX = Math.sin(t * 0.1) * 1.2;
-        const driftY = 7 + Math.sin(t * 0.15) * 0.3;
-        const driftZ = 20 + Math.cos(t * 0.1) * 1.2;
-        camera.position.lerp(new THREE.Vector3(driftX, driftY, driftZ), 0.015);
+        const driftX = 8 + Math.sin(t * 0.1) * 1.0;
+        const driftY = 12 + Math.sin(t * 0.15) * 0.3;
+        const driftZ = 18 + Math.cos(t * 0.1) * 1.0;
+        camera.position.lerp(new THREE.Vector3(driftX, driftY, driftZ), 0.012);
         if (controlsRef.current) {
           controlsRef.current.target.lerp(new THREE.Vector3(0, 1, 0), 0.02);
           controlsRef.current.update();
@@ -158,24 +165,18 @@ export function CameraRig({ equipment }: CameraRigProps) {
       }
       if (camera.position.distanceTo(targetPos.current) < 0.3) {
         mode.current = "orbiting";
-        // orbit for a fixed window; extends while AI is speaking
         orbitUntil.current = performance.now() + 12000;
       }
       return;
     }
 
-    // ORBITING mode — slow cinematic orbit, but only while AI is speaking
-    // OR for a limited window after arriving. Stops the moment the user
-    // touches the camera (handled by the pointer/wheel listener which sets
-    // mode to "manual").
+    // ORBITING mode — slow cinematic orbit, only while AI is speaking
     if (mode.current === "orbiting") {
       const now = performance.now();
-      // Keep orbiting while AI is speaking, otherwise stop after the window
       if (!isAssistantSpeaking && now > orbitUntil.current) {
         mode.current = "manual";
         return;
       }
-      // extend the window while speaking
       if (isAssistantSpeaking) {
         orbitUntil.current = now + 4000;
       }
@@ -203,9 +204,15 @@ export function CameraRig({ equipment }: CameraRigProps) {
       ref={controlsRef as any}
       enableDamping
       dampingFactor={0.08}
-      minDistance={2.5}
-      maxDistance={60}
+      enableZoom
+      enablePan
+      enableRotate
+      minDistance={2}
+      maxDistance={80}
       maxPolarAngle={Math.PI / 2.05}
+      zoomSpeed={1.0}
+      rotateSpeed={0.8}
+      panSpeed={0.8}
       target={[0, 1, 0]}
       makeDefault
     />

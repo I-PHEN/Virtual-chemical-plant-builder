@@ -16,6 +16,7 @@ export function VoiceButton({ onTranscript }: VoiceButtonProps) {
   const setListening = useAppStore((s) => s.setListening);
   const voiceEnabled = useAppStore((s) => s.voiceEnabled);
   const setVoiceEnabled = useAppStore((s) => s.setVoiceEnabled);
+  const setCaptionProgress = useAppStore((s) => s.setCaptionProgress);
   const currentPlant = useAppStore((s) => s.currentPlant);
 
   const {
@@ -71,14 +72,14 @@ export function VoiceButton({ onTranscript }: VoiceButtonProps) {
 
   useEffect(() => {
     (window as any).__plantSpeak = (text: string) => {
-      if (voiceEnabled) speak(text);
+      if (voiceEnabled) speak(text, (charIndex) => setCaptionProgress(charIndex));
     };
     (window as any).__plantStopSpeak = () => stopSpeaking();
     return () => {
       delete (window as any).__plantSpeak;
       delete (window as any).__plantStopSpeak;
     };
-  }, [voiceEnabled, speak, stopSpeaking]);
+  }, [voiceEnabled, speak, stopSpeaking, setCaptionProgress]);
 
   return (
     <div className="pointer-events-auto flex flex-col items-center gap-1.5">
