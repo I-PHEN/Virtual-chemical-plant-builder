@@ -104,8 +104,11 @@ Reply with JSON only — no markdown, no commentary.`;
 }
 
 function buildIntro(name: string, overview: string): string {
-  // Conversational auto-intro the AI speaks the moment the plant loads.
-  // Short, warm, invites the student into the experience.
   const shortName = name.split(" (")[0];
-  return `Hey, welcome! I've got the ${shortName} ready for you. I'm your AI process engineer — think of me as someone who's been working here for years. I can walk you through the whole thing, or you can just click anything that catches your eye and ask me about it. Want me to start from the beginning?`;
+  const variants = [
+    `Hey! Welcome to the ${shortName}. I'm your process engineer — think of me as someone who's been working here for years and actually loves showing people around. We can walk through the whole thing together, or you can just click on anything that catches your eye and ask me about it. What sounds good?`,
+    `Alright, the ${shortName} is ready! I'll be your guide through this thing. I know every pipe and valve in here, so don't be shy — ask me anything. Want me to start from the beginning and walk you through it?`,
+    `Here we go — the ${shortName}, all built and ready to explore. I'm basically your personal engineer for this plant. Click anything you're curious about, or just tell me to walk you through it and I'll take it from the top. What do you want to see first?`,
+  ];
+  return variants[Math.floor(Math.random() * variants.length)];
 }
