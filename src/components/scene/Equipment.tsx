@@ -107,30 +107,58 @@ export function Equipment({ equipment }: EquipmentProps) {
         </mesh>
       )}
 
-      {/* floating label */}
-      {isActive && (
+      {/* Always-visible persistent label — small, doesn't shrink with distance */}
+      {!isHidden && !isActive && (
         <Billboard position={[0, getLabelHeight(equipment.type), 0]}>
-          <Html center distanceFactor={9} occlude={false} zIndexRange={[20, 0]}>
+          <Html center occlude={false} zIndexRange={[20, 0]} prepend>
             <div
               style={{
-                background: "rgba(2, 6, 23, 0.92)",
+                background: "rgba(8, 9, 12, 0.85)",
                 color: "white",
-                padding: "7px 12px",
+                padding: "4px 10px",
+                borderRadius: "6px",
+                border: `1px solid ${meta.color}44`,
+                borderLeft: `2px solid ${meta.color}`,
+                fontSize: "12px",
+                fontFamily: "var(--font-geist-sans, sans-serif)",
+                fontWeight: 500,
+                whiteSpace: "nowrap",
+                pointerEvents: "none",
+                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
+                backdropFilter: "blur(6px)",
+                userSelect: "none",
+              }}
+            >
+              {equipment.name}
+            </div>
+          </Html>
+        </Billboard>
+      )}
+
+      {/* Larger detailed label when active (hovered/selected/focused) */}
+      {isActive && (
+        <Billboard position={[0, getLabelHeight(equipment.type), 0]}>
+          <Html center occlude={false} zIndexRange={[20, 0]}>
+            <div
+              style={{
+                background: "rgba(2, 6, 23, 0.95)",
+                color: "white",
+                padding: "8px 14px",
                 borderRadius: "10px",
-                border: `1px solid ${meta.color}66`,
+                border: `1px solid ${meta.color}88`,
                 borderLeft: `3px solid ${meta.color}`,
-                fontSize: "13px",
+                fontSize: "15px",
                 fontFamily: "var(--font-geist-sans, sans-serif)",
                 whiteSpace: "nowrap",
                 pointerEvents: "none",
-                boxShadow: `0 8px 24px rgba(0,0,0,0.5), 0 0 16px ${meta.color}33`,
+                boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 20px ${meta.color}44`,
                 backdropFilter: "blur(8px)",
               }}
             >
-              <div style={{ fontWeight: 600, fontSize: "13px", lineHeight: 1.2 }}>
+              <div style={{ fontWeight: 600, fontSize: "15px", lineHeight: 1.2 }}>
                 {equipment.name}
               </div>
-              <div style={{ opacity: 0.6, fontSize: "10px", marginTop: 2, textTransform: "uppercase", letterSpacing: "0.1em" }}>
+              <div style={{ opacity: 0.7, fontSize: "11px", marginTop: 3, textTransform: "uppercase", letterSpacing: "0.1em" }}>
                 {meta.singularName}
               </div>
             </div>
