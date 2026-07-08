@@ -43,11 +43,10 @@ export function useVoice(options: UseVoiceOptions = {}) {
   const finalTranscriptRef = useRef("");
   const onFinalRef = useRef(onFinalTranscript);
   const onProgressRef = useRef<((charIndex: number) => void) | null>(null);
-  const handsFreeRef = useRef(false);
+  const handsFreeRef = useRef(true);
   const aiSpeakingRef = useRef(false);
   const wantListeningRef = useRef(false);
   const restartTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const currentUtteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
   useEffect(() => {
     onFinalRef.current = onFinalTranscript;
@@ -85,6 +84,18 @@ export function useVoice(options: UseVoiceOptions = {}) {
         const transcript = event.results[i][0].transcript;
         if (event.results[i].isFinal) finalText += transcript;
         else interimText += transcript;
+      }
+      // INTERRUPT: if the user starts speaking while AI is talking, cut the AI off
+      if (interimText.length > 0 && aiSpeakingRef.current) {
+        if (currentAudioRef.current) {
+          currentAudioRef.current.pause();
+          currentAudioRef.current = null;
+        }
+        if (typeof window !== "undefined" && "speechSynthesis" in window) {
+          window.speechSynthesis.cancel();
+        }
+        setIsSpeaking(false);
+        aiSpeakingRef.current = false;
       }
       if (finalText) finalTranscriptRef.current += finalText;
       setInterim(interimText);
@@ -235,35 +246,18 @@ export function useVoice(options: UseVoiceOptions = {}) {
   }, []);
 
   // ─── Speaking control with word-boundary captions ───
-  const speak = useCallback((text: string, onProgress?: (charIndex: number) => void) => {
+  // Tries server-side neural TTS first (better quality), falls back to
+  // browser SpeechSynthesis if the server is unavailable.
+  const currentAudioRef = useRef<HTMLAudioElement | null>(null);
+  const useServerTTSRef = useRef<boolean | null>(null); // null = not tested yet
+
+  const speakWithBrowserTTS = (clean: string, onProgress?: (charIndex: number) => void) => {
     if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    const clean = text
-      .replace(/[*_`#>]/g, "")
-      .replace(/\s+/g, " ")
-      .trim();
-    if (!clean) return;
-
-    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
-
-    onProgressRef.current = onProgress ?? null;
-
-    // PAUSE the mic while speaking
-    if (recognitionRef.current && wantListeningRef.current) {
-      try {
-        recognitionRef.current.stop();
-      } catch {
-        // ignore
-      }
-      setIsListening(false);
-    }
-
-    // Ensure voices are loaded before speaking
-    const voices = window.speechSynthesis.getVoices();
 
     const doSpeak = () => {
       const utter = new SpeechSynthesisUtterance(clean);
-      utter.rate = 0.97;
+      utter.rate = 1.0;
       utter.pitch = 1.0;
       utter.volume = 1.0;
       const v = window.speechSynthesis.getVoices();
@@ -277,76 +271,175 @@ export function useVoice(options: UseVoiceOptions = {}) {
       utter.onstart = () => {
         setIsSpeaking(true);
         aiSpeakingRef.current = true;
-        if (onProgressRef.current) onProgressRef.current(0);
+        if (onProgress) onProgress(0);
       };
-
       utter.onboundary = (event: SpeechSynthesisEvent) => {
         if (event.name === "word" || event.name === undefined) {
-          if (onProgressRef.current) {
-            onProgressRef.current(event.charIndex);
-          }
+          if (onProgress) onProgress(event.charIndex);
         }
       };
-
       utter.onend = () => {
         setIsSpeaking(false);
         aiSpeakingRef.current = false;
-        if (onProgressRef.current) onProgressRef.current(clean.length);
-        if (wantListeningRef.current && handsFreeRef.current) {
-          restartTimerRef.current = setTimeout(() => {
-            if (recognitionRef.current && wantListeningRef.current && !aiSpeakingRef.current) {
-              try {
-                recognitionRef.current.start();
-                setIsListening(true);
-              } catch {
-                // ignore
-              }
-            }
-          }, 500);
-        }
+        if (onProgress) onProgress(clean.length);
+        resumeListeningAfterSpeech();
       };
       utter.onerror = () => {
         setIsSpeaking(false);
         aiSpeakingRef.current = false;
-        if (wantListeningRef.current && handsFreeRef.current) {
-          restartTimerRef.current = setTimeout(() => {
-            if (recognitionRef.current && wantListeningRef.current) {
-              try {
-                recognitionRef.current.start();
-                setIsListening(true);
-              } catch {
-                // ignore
-              }
-            }
-          }, 500);
-        }
+        resumeListeningAfterSpeech();
       };
-      currentUtteranceRef.current = utter;
       window.speechSynthesis.speak(utter);
     };
 
-    // If voices aren't loaded yet, wait a bit and retry
+    const voices = window.speechSynthesis.getVoices();
     if (voices.length === 0) {
       let retries = 0;
       const waitAndSpeak = () => {
         const v = window.speechSynthesis.getVoices();
-        if (v.length > 0 || retries >= 10) {
-          doSpeak();
-        } else {
-          retries++;
-          setTimeout(waitAndSpeak, 100);
-        }
+        if (v.length > 0 || retries >= 10) doSpeak();
+        else { retries++; setTimeout(waitAndSpeak, 100); }
       };
       setTimeout(waitAndSpeak, 150);
     } else {
-      // Small delay to ensure cancel() has completed
       setTimeout(doSpeak, 50);
+    }
+  };
+
+  const speakWithServerTTS = async (clean: string, onProgress?: (charIndex: number) => void) => {
+    try {
+      const res = await fetch("/api/tts", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: clean }),
+      });
+
+      if (!res.ok) throw new Error("TTS failed");
+
+      const contentType = res.headers.get("content-type") || "";
+      if (!contentType.includes("audio")) {
+        // Server returned JSON (fallback signal)
+        useServerTTSRef.current = false;
+        speakWithBrowserTTS(clean, onProgress);
+        return;
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const audio = new Audio(url);
+      currentAudioRef.current = audio;
+
+      // Simulate word-by-word progress for captions since server TTS
+      // doesn't fire boundary events. We split by words and advance
+      // based on audio time.
+      const words = clean.split(/\s+/);
+      let charCount = 0;
+      const wordBoundaries: number[] = [];
+      for (const w of words) {
+        wordBoundaries.push(charCount);
+        charCount += w.length + 1;
+      }
+
+      audio.onplay = () => {
+        setIsSpeaking(true);
+        aiSpeakingRef.current = true;
+        if (onProgress) onProgress(0);
+      };
+
+      // Update caption progress based on audio currentTime
+      audio.ontimeupdate = () => {
+        if (!onProgress || !audio.duration) return;
+        const ratio = audio.currentTime / audio.duration;
+        const wordIdx = Math.floor(ratio * words.length);
+        const charIdx = wordBoundaries[Math.min(wordIdx, wordBoundaries.length - 1)] ?? 0;
+        onProgress(charIdx);
+      };
+
+      audio.onended = () => {
+        setIsSpeaking(false);
+        aiSpeakingRef.current = false;
+        if (onProgress) onProgress(clean.length);
+        URL.revokeObjectURL(url);
+        currentAudioRef.current = null;
+        resumeListeningAfterSpeech();
+      };
+
+      audio.onerror = () => {
+        setIsSpeaking(false);
+        aiSpeakingRef.current = false;
+        URL.revokeObjectURL(url);
+        currentAudioRef.current = null;
+        // Fall back to browser TTS
+        speakWithBrowserTTS(clean, onProgress);
+      };
+
+      await audio.play();
+      useServerTTSRef.current = true;
+    } catch (err) {
+      console.error("[voice] server TTS failed, falling back", err);
+      useServerTTSRef.current = false;
+      speakWithBrowserTTS(clean, onProgress);
+    }
+  };
+
+  const resumeListeningAfterSpeech = () => {
+    if (wantListeningRef.current && handsFreeRef.current) {
+      restartTimerRef.current = setTimeout(() => {
+        if (recognitionRef.current && wantListeningRef.current && !aiSpeakingRef.current) {
+          try {
+            recognitionRef.current.start();
+            setIsListening(true);
+          } catch {
+            // ignore
+          }
+        }
+      }, 400);
+    }
+  };
+
+  const speak = useCallback((text: string, onProgress?: (charIndex: number) => void) => {
+    if (typeof window === "undefined") return;
+    const clean = text
+      .replace(/[*_`#>]/g, "")
+      .replace(/\s+/g, " ")
+      .trim();
+    if (!clean) return;
+
+    // Stop any current audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if ("speechSynthesis" in window) window.speechSynthesis.cancel();
+
+    onProgressRef.current = onProgress ?? null;
+
+    // PAUSE the mic while speaking
+    if (recognitionRef.current && wantListeningRef.current) {
+      try {
+        recognitionRef.current.stop();
+      } catch {
+        // ignore
+      }
+      setIsListening(false);
+    }
+
+    // Use server TTS if we haven't tested it yet, or if it worked before
+    if (useServerTTSRef.current === null || useServerTTSRef.current === true) {
+      speakWithServerTTS(clean, onProgress);
+    } else {
+      speakWithBrowserTTS(clean, onProgress);
     }
   }, []);
 
   const stopSpeaking = useCallback(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
-    window.speechSynthesis.cancel();
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+    if (typeof window !== "undefined" && "speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
+    }
     setIsSpeaking(false);
     aiSpeakingRef.current = false;
   }, []);

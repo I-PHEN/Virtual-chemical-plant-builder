@@ -107,36 +107,8 @@ export function Equipment({ equipment }: EquipmentProps) {
         </mesh>
       )}
 
-      {/* Always-visible persistent label — small, doesn't shrink with distance */}
-      {!isHidden && !isActive && (
-        <Billboard position={[0, getLabelHeight(equipment.type), 0]}>
-          <Html center occlude={false} zIndexRange={[20, 0]} prepend>
-            <div
-              style={{
-                background: "rgba(8, 9, 12, 0.85)",
-                color: "white",
-                padding: "4px 10px",
-                borderRadius: "6px",
-                border: `1px solid ${meta.color}44`,
-                borderLeft: `2px solid ${meta.color}`,
-                fontSize: "12px",
-                fontFamily: "var(--font-geist-sans, sans-serif)",
-                fontWeight: 500,
-                whiteSpace: "nowrap",
-                pointerEvents: "none",
-                boxShadow: "0 4px 12px rgba(0,0,0,0.4)",
-                backdropFilter: "blur(6px)",
-                userSelect: "none",
-              }}
-            >
-              {equipment.name}
-            </div>
-          </Html>
-        </Billboard>
-      )}
-
-      {/* Larger detailed label when active (hovered/selected/focused) */}
-      {isActive && (
+      {/* Label only on hover/select/focus — larger and more readable */}
+      {isActive && !isHidden && (
         <Billboard position={[0, getLabelHeight(equipment.type), 0]}>
           <Html center occlude={false} zIndexRange={[20, 0]}>
             <div
