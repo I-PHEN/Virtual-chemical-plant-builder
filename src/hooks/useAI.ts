@@ -30,6 +30,7 @@ export function useAIConversation() {
       const state = useAppStore.getState();
       const plantId = state.currentPlant?.id ?? null;
       const selectedEquipmentId = state.selectedEquipmentId;
+      const tourStep = state.tourStep;
 
       const history = state.messages
         .filter((m) => m.role !== "system")
@@ -51,6 +52,7 @@ export function useAIConversation() {
           body: JSON.stringify({
             plantId,
             selectedEquipmentId,
+            tourStep,
             history,
             message: text,
           }),
@@ -125,6 +127,10 @@ function applyAction(
       break;
     case "tour":
       handlers.setTourStep(action.step - 1 < 0 ? 0 : action.step - 1);
+      break;
+    case "stopTour":
+      handlers.setTourStep(null);
+      handlers.selectEquipment(null);
       break;
     case "quiz":
       // quiz is conversational; no scene change needed

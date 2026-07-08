@@ -102,6 +102,7 @@ export type AssistantAction =
   | { kind: "hide"; equipmentType: EquipmentType }
   | { kind: "showAll" }
   | { kind: "tour"; step: number }
+  | { kind: "stopTour" }
   | { kind: "quiz"; question: string };
 
 export interface PlantBuilderResult {

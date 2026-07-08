@@ -10,6 +10,7 @@ export const maxDuration = 30;
 interface ChatRequestBody {
   plantId: string | null;
   selectedEquipmentId: string | null;
+  tourStep: number | null;
   history: { role: "user" | "assistant"; content: string }[];
   message: string;
 }
@@ -38,7 +39,11 @@ export async function POST(req: NextRequest) {
   }
 
   const { plant, selectedEquipment } = resolveContext(body);
-  const systemPrompt = buildSystemPrompt({ plant, selectedEquipment });
+  const systemPrompt = buildSystemPrompt({
+    plant,
+    selectedEquipment,
+    tourStep: body.tourStep ?? null,
+  });
 
   // Build messages array for the model
   const conversation: { role: "system" | "user" | "assistant"; content: string }[] = [

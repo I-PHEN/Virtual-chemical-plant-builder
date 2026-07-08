@@ -127,8 +127,41 @@ export function useVoice(options: UseVoiceOptions = {}) {
   useEffect(() => {
     if (typeof window === "undefined") return;
     if (!("speechSynthesis" in window)) return;
-    window.speechSynthesis.getVoices();
+
+    // Force-load voices. Chrome loads them asynchronously, so we need to
+    // call getVoices() and also listen for the voiceschanged event.
+    const loadVoices = () => {
+      window.speechSynthesis.getVoices();
+    };
+    loadVoices();
+    window.speechSynthesis.addEventListener("voiceschanged", loadVoices);
+
+    // Some browsers need a "warm-up" utterance to unlock speech synthesis
+    // after a user gesture. We do a silent 0-length utterance on first
+    // interaction.
+    const warmUp = () => {
+      if (typeof window === "undefined" || !("speechSynthesis" in window)) return;
+      try {
+        const u = new SpeechSynthesisUtterance("");
+        u.volume = 0;
+        window.speechSynthesis.speak(u);
+      } catch {
+        // ignore
+      }
+      // remove after first interaction
+      window.removeEventListener("click", warmUp);
+      window.removeEventListener("keydown", warmUp);
+      window.removeEventListener("touchstart", warmUp);
+    };
+    window.addEventListener("click", warmUp);
+    window.addEventListener("keydown", warmUp);
+    window.addEventListener("touchstart", warmUp);
+
     return () => {
+      window.speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+      window.removeEventListener("click", warmUp);
+      window.removeEventListener("keydown", warmUp);
+      window.removeEventListener("touchstart", warmUp);
       try {
         window.speechSynthesis.cancel();
       } catch {
@@ -201,6 +234,8 @@ export function useVoice(options: UseVoiceOptions = {}) {
       .replace(/\s+/g, " ")
       .trim();
     if (!clean) return;
+
+    // Cancel any ongoing speech
     window.speechSynthesis.cancel();
 
     onProgressRef.current = onProgress ?? null;
@@ -215,74 +250,90 @@ export function useVoice(options: UseVoiceOptions = {}) {
       setIsListening(false);
     }
 
-    const utter = new SpeechSynthesisUtterance(clean);
-    // Conversational tuning — slightly slower, natural pitch
-    utter.rate = 0.97;
-    utter.pitch = 1.0;
-    utter.volume = 1.0;
+    // Ensure voices are loaded before speaking
     const voices = window.speechSynthesis.getVoices();
-    // Prefer natural-sounding voices
-    const preferred =
-      voices.find((v) => /en[-_]?US/i.test(v.lang) && /google us english|samantha|aria|jenny|christopher|david/i.test(v.name)) ||
-      voices.find((v) => /en[-_]?GB/i.test(v.lang) && /libby|sonia|ryan/i.test(v.name)) ||
-      voices.find((v) => /en[-_]?US/i.test(v.lang)) ||
-      voices.find((v) => /^en/i.test(v.lang));
-    if (preferred) utter.voice = preferred;
 
-    utter.onstart = () => {
-      setIsSpeaking(true);
-      aiSpeakingRef.current = true;
-      // start at zero progress
-      if (onProgressRef.current) onProgressRef.current(0);
-    };
+    const doSpeak = () => {
+      const utter = new SpeechSynthesisUtterance(clean);
+      utter.rate = 0.97;
+      utter.pitch = 1.0;
+      utter.volume = 1.0;
+      const v = window.speechSynthesis.getVoices();
+      const preferred =
+        v.find((voice) => /en[-_]?US/i.test(voice.lang) && /google us english|samantha|aria|jenny|christopher|david/i.test(voice.name)) ||
+        v.find((voice) => /en[-_]?GB/i.test(voice.lang) && /libby|sonia|ryan/i.test(voice.name)) ||
+        v.find((voice) => /en[-_]?US/i.test(voice.lang)) ||
+        v.find((voice) => /^en/i.test(voice.lang));
+      if (preferred) utter.voice = preferred;
 
-    // Word boundary — fires as each word is spoken. This is what gives us
-    // real word-by-word caption reveal.
-    utter.onboundary = (event: SpeechSynthesisEvent) => {
-      if (event.name === "word" || event.name === undefined) {
-        if (onProgressRef.current) {
-          onProgressRef.current(event.charIndex);
+      utter.onstart = () => {
+        setIsSpeaking(true);
+        aiSpeakingRef.current = true;
+        if (onProgressRef.current) onProgressRef.current(0);
+      };
+
+      utter.onboundary = (event: SpeechSynthesisEvent) => {
+        if (event.name === "word" || event.name === undefined) {
+          if (onProgressRef.current) {
+            onProgressRef.current(event.charIndex);
+          }
         }
-      }
+      };
+
+      utter.onend = () => {
+        setIsSpeaking(false);
+        aiSpeakingRef.current = false;
+        if (onProgressRef.current) onProgressRef.current(clean.length);
+        if (wantListeningRef.current && handsFreeRef.current) {
+          restartTimerRef.current = setTimeout(() => {
+            if (recognitionRef.current && wantListeningRef.current && !aiSpeakingRef.current) {
+              try {
+                recognitionRef.current.start();
+                setIsListening(true);
+              } catch {
+                // ignore
+              }
+            }
+          }, 500);
+        }
+      };
+      utter.onerror = () => {
+        setIsSpeaking(false);
+        aiSpeakingRef.current = false;
+        if (wantListeningRef.current && handsFreeRef.current) {
+          restartTimerRef.current = setTimeout(() => {
+            if (recognitionRef.current && wantListeningRef.current) {
+              try {
+                recognitionRef.current.start();
+                setIsListening(true);
+              } catch {
+                // ignore
+              }
+            }
+          }, 500);
+        }
+      };
+      currentUtteranceRef.current = utter;
+      window.speechSynthesis.speak(utter);
     };
 
-    utter.onend = () => {
-      setIsSpeaking(false);
-      aiSpeakingRef.current = false;
-      // make sure we show the full text at the end
-      if (onProgressRef.current) onProgressRef.current(clean.length);
-      // RESUME listening after a short pause (hands-free flow)
-      if (wantListeningRef.current && handsFreeRef.current) {
-        restartTimerRef.current = setTimeout(() => {
-          if (recognitionRef.current && wantListeningRef.current && !aiSpeakingRef.current) {
-            try {
-              recognitionRef.current.start();
-              setIsListening(true);
-            } catch {
-              // ignore
-            }
-          }
-        }, 500);
-      }
-    };
-    utter.onerror = () => {
-      setIsSpeaking(false);
-      aiSpeakingRef.current = false;
-      if (wantListeningRef.current && handsFreeRef.current) {
-        restartTimerRef.current = setTimeout(() => {
-          if (recognitionRef.current && wantListeningRef.current) {
-            try {
-              recognitionRef.current.start();
-              setIsListening(true);
-            } catch {
-              // ignore
-            }
-          }
-        }, 500);
-      }
-    };
-    currentUtteranceRef.current = utter;
-    window.speechSynthesis.speak(utter);
+    // If voices aren't loaded yet, wait a bit and retry
+    if (voices.length === 0) {
+      let retries = 0;
+      const waitAndSpeak = () => {
+        const v = window.speechSynthesis.getVoices();
+        if (v.length > 0 || retries >= 10) {
+          doSpeak();
+        } else {
+          retries++;
+          setTimeout(waitAndSpeak, 100);
+        }
+      };
+      setTimeout(waitAndSpeak, 150);
+    } else {
+      // Small delay to ensure cancel() has completed
+      setTimeout(doSpeak, 50);
+    }
   }, []);
 
   const stopSpeaking = useCallback(() => {

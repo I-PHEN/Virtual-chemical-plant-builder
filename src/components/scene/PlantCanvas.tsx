@@ -8,6 +8,7 @@ import { Equipment } from "./Equipment";
 import { PipeNetwork } from "./PipeNetwork";
 import { CameraRig } from "./CameraRig";
 import { Environment, Ground } from "./Environment";
+import { CameraController } from "./CameraController";
 
 export function PlantCanvas() {
   const currentPlant = useAppStore((s) => s.currentPlant);
@@ -29,6 +30,7 @@ export function PlantCanvas() {
       <Suspense fallback={null}>
         <Environment />
         <Ground />
+        <CameraController />
         {currentPlant && (
           <>
             <PipeNetwork equipment={currentPlant.equipment} pipes={currentPlant.pipes} />

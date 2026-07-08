@@ -23,6 +23,8 @@ interface AppState {
 
   // Tour
   tourStep: number | null;
+  /** Whether the tour should auto-advance when the AI finishes speaking */
+  tourAutoAdvance: boolean;
 
   // Chat
   messages: ChatMessage[];
@@ -44,6 +46,7 @@ interface AppState {
   setDisplayStateByType: (type: EquipmentType, state: DisplayState) => void;
   showAll: () => void;
   setTourStep: (step: number | null) => void;
+  setTourAutoAdvance: (v: boolean) => void;
   addMessage: (msg: ChatMessage) => void;
   clearMessages: () => void;
   setAssistantSpeaking: (v: boolean) => void;
@@ -65,6 +68,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   highlightType: null,
 
   tourStep: null,
+  tourAutoAdvance: true,
 
   messages: [],
   isAssistantSpeaking: false,
@@ -85,6 +89,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       focusEquipmentId: null,
       highlightType: null,
       tourStep: null,
+      tourAutoAdvance: true,
       messages: [],
     }),
 
@@ -136,6 +141,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   },
 
   setTourStep: (step) => set({ tourStep: step }),
+  setTourAutoAdvance: (v) => set({ tourAutoAdvance: v }),
 
   addMessage: (msg) => set((s) => ({ messages: [...s.messages, msg] })),
 
@@ -160,6 +166,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       focusEquipmentId: null,
       highlightType: null,
       tourStep: null,
+      tourAutoAdvance: true,
       messages: [],
       currentCaption: "",
       captionProgress: 0,

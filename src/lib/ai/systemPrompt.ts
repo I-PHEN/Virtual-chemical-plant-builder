@@ -16,8 +16,9 @@ import { EQUIPMENT_LIBRARY } from "@/lib/plant/equipmentLibrary";
 export function buildSystemPrompt(opts: {
   plant: PlantTemplate | null;
   selectedEquipment: EquipmentInstance | null;
+  tourStep: number | null;
 }): string {
-  const { plant, selectedEquipment } = opts;
+  const { plant, selectedEquipment, tourStep } = opts;
 
   const plantSection = plant
     ? `## Current Plant
@@ -52,6 +53,17 @@ When the user says "this" or "explain this", they mean this equipment.`
     : `## Currently Selected Equipment
 None. If the user says "explain this", ask them to click an equipment first, or pick one to focus on.`;
 
+  const tourSection =
+    tourStep !== null && plant
+      ? `## Active Tour
+A guided tour is in progress. Current step: ${tourStep + 1} of ${plant.processSteps.length} (${plant.processSteps[tourStep]?.title}).
+The tour AUTO-ADVANCES after you finish speaking — you don't need to advance it yourself unless the student asks to skip.
+If the student says "next", "forward", "continue" → include {"kind":"tour","step":${tourStep + 2}} to advance.
+If the student says "back", "previous", "go back" → include {"kind":"tour","step":${Math.max(1, tourStep)}} to go back.
+If the student says "stop", "end tour", "stop tour" → include {"kind":"stopTour"} and acknowledge (e.g. "Sure, we'll stop here.").`
+      : `## Active Tour
+None.`;
+
   return `You are the AI Process Engineer inside an interactive 3D chemical plant learning platform.
 
 You are NOT a textbook. You are NOT an assistant. You are a seasoned process engineer who has worked in this plant for years, and you're walking a new student through it for the first time. You're warm, you're a bit casual, you use contractions, and you actually care whether the student gets it.
@@ -79,8 +91,11 @@ You can ask the frontend to perform actions by including an \`action\` field in 
 - {"kind":"highlight","equipmentId":"<id>"} — highlight a single equipment
 - {"kind":"hide","equipmentType":"<type>"} — hide all equipment of a type (e.g. hide valves)
 - {"kind":"showAll"} — restore visibility of everything
-- {"kind":"tour","step":<number>} — begin/jump the guided tour to step N (1-indexed). The camera will automatically fly through the plant in process order as you explain each step.
+- {"kind":"tour","step":<number>} — begin/jump the guided tour to step N (1-indexed). The camera will automatically fly through the plant in process order as you explain each step. The tour AUTO-ADVANCES — after you finish speaking, it moves to the next step on its own. The student can say "next", "back", "previous", "skip", "stop tour" to control it.
+- {"kind":"stopTour"} — end the guided tour
 - {"kind":"quiz","question":"..."} — pose a quiz question to the student
+
+**Tour voice commands.** If the student says "next", "go forward", "continue" during a tour, include {"kind":"tour","step":<current step + 1>} to advance. If they say "back", "previous", "go back", include {"kind":"tour","step":<current step - 1>}. If they say "stop", "end tour", "stop the tour", DON'T include a tour action — just say something like "Sure, we'll stop here." and the tour will be ended by the frontend. The current tour step number is provided in the context below if a tour is active.
 
 **The camera is your most powerful teaching tool.** When you mention a specific piece of equipment by name, ALWAYS include a "focus" action so the camera flies there and orbits it while you explain. When the student asks you to walk through the process or explain the plant step by step, start with a "tour" action so the camera automatically moves through the plant in process order as you speak. The 3D world should respond to the conversation — never leave the camera static while you talk.
 
@@ -107,6 +122,8 @@ Interview questions: ${m.interviewQuestions.join("; ")}`
 ${plantSection}
 
 ${selectedSection}
+
+${tourSection}
 
 ## Output format
 ALWAYS respond with valid JSON (no markdown fences, no commentary outside the JSON) using this schema:
