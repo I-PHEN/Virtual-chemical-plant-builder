@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Mic, ArrowUp, Settings, Atom, Bot, User, Plus, MessageSquare, PanelLeftClose, PanelLeft, Loader2, CheckCircle2, ArrowRight } from "lucide-react";
+import { Mic, ArrowUp, Settings, Atom, Plus, MessageSquare, PanelLeftClose, PanelLeft, Loader2, CheckCircle2, ArrowRight, Factory, FlaskConical, Wind, Wine } from "lucide-react";
 import { PLANT_TEMPLATES } from "@/lib/plant/templates";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { cn } from "@/lib/utils";
@@ -17,6 +17,20 @@ interface ChatMessage {
   content: string;
   status?: "building" | "ready";
 }
+
+const ICONS: Record<string, React.ReactNode> = {
+  ammonia: <Factory className="h-4 w-4" />,
+  distillation: <FlaskConical className="h-4 w-4" />,
+  "sulfuric-acid": <Wind className="h-4 w-4" />,
+  ethanol: <Wine className="h-4 w-4" />,
+};
+
+const ACCENT: Record<string, string> = {
+  ammonia: "#3b82f6",
+  distillation: "#a855f7",
+  "sulfuric-acid": "#ef4444",
+  ethanol: "#10b981",
+};
 
 export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
   const isGenerating = useAppStore((s) => s.isGenerating);
@@ -194,7 +208,7 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
         </header>
 
         {!hasMessages ? (
-          /* Ultra-minimal empty state — just a centered input */
+          /* Empty state — centered input + plant card grid below */
           <div className="flex flex-1 flex-col items-center justify-center px-6">
             <div className="w-full max-w-xl">
               <p className="mb-3 text-center text-[11px] text-slate-500">
@@ -229,6 +243,59 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
                   </button>
                 </div>
               </form>
+
+              {/* Plant suggestion cards — 2x2 grid below the input */}
+              <div className="mt-5 grid grid-cols-2 gap-2.5">
+                {PLANT_TEMPLATES.map((tpl) => (
+                  <button
+                    key={tpl.id}
+                    onClick={() => sendMessage(`Build a ${tpl.name.toLowerCase().split(" ")[0]} plant`)}
+                    disabled={isGenerating}
+                    className={cn(
+                      "group relative flex items-start gap-2.5 overflow-hidden rounded-xl border border-white/10 bg-[#252525] p-3 text-left transition-all",
+                      "hover:border-white/20 hover:bg-[#2d2d2d] disabled:cursor-not-allowed disabled:opacity-40"
+                    )}
+                  >
+                    {/* Accent glow */}
+                    <div
+                      className="pointer-events-none absolute -right-4 -top-4 h-16 w-16 rounded-full opacity-0 blur-2xl transition-opacity duration-300 group-hover:opacity-20"
+                      style={{ background: ACCENT[tpl.id] }}
+                    />
+                    {/* Icon */}
+                    <div
+                      className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-lg ring-1 transition-transform group-hover:scale-110"
+                      style={{
+                        background: `${ACCENT[tpl.id]}15`,
+                        color: ACCENT[tpl.id],
+                        borderColor: `${ACCENT[tpl.id]}30`,
+                      }}
+                    >
+                      {ICONS[tpl.id]}
+                    </div>
+                    {/* Text */}
+                    <div className="min-w-0 flex-1">
+                      <div className="text-[12px] font-semibold text-white">
+                        {tpl.name.split(" (")[0]}
+                      </div>
+                      <div className="mt-0.5 line-clamp-1 text-[10px] text-slate-500">
+                        {tpl.tagline}
+                      </div>
+                      <div className="mt-1.5 flex items-center gap-2">
+                        <span className="text-[9px] text-slate-600">{tpl.equipment.length} units · {tpl.estimatedTime}m</span>
+                        <span
+                          className={cn(
+                            "rounded px-1 py-0.5 text-[7px] font-medium uppercase",
+                            tpl.difficulty === "Beginner" && "bg-emerald-500/10 text-emerald-400",
+                            tpl.difficulty === "Intermediate" && "bg-amber-500/10 text-amber-400"
+                          )}
+                        >
+                          {tpl.difficulty}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         ) : (
