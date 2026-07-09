@@ -32,6 +32,12 @@ export default function Home() {
 
   const handleBuild = useCallback(
     async (command: string) => {
+      // "__enter_sim__" means the user clicked "Enter simulation" from the
+      // ready card — the plant is already built, just dismiss the welcome.
+      if (command === "__enter_sim__") {
+        useAppStore.getState().setGenerating(false);
+        return;
+      }
       await build(command);
     },
     [build]

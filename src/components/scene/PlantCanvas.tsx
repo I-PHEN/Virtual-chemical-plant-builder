@@ -30,9 +30,9 @@ export function PlantCanvas() {
       }}
     >
       <Suspense fallback={null}>
-        <Environment theme={currentPlant?.theme} />
+        <Environment />
         <Ground />
-        <IndustrialBackdrop theme={currentPlant?.theme} />
+        <IndustrialBackdrop />
         <CameraController />
         {currentPlant && (
           <>

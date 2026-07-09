@@ -29,10 +29,7 @@ export function Equipment({ equipment }: EquipmentProps) {
   const isHidden = displayState === "hidden";
   const isHighlighted = displayState === "highlighted";
 
-  // Use theme equipment color if available, otherwise library default
-  const theme = useAppStore((s) => s.currentPlant?.theme);
-  const equipmentColor = theme?.equipmentColor ?? meta.color;
-  const accentColor = useMemo(() => new THREE.Color(equipmentColor), [equipmentColor]);
+  const accentColor = useMemo(() => new THREE.Color(meta.color), [meta.color]);
 
   // gentle hover float
   useFrame((state) => {
@@ -52,7 +49,7 @@ export function Equipment({ equipment }: EquipmentProps) {
   if (isHidden) {
     return (
       <group ref={groupRef} position={equipment.position}>
-        <EquipmentModel type={equipment.type} color={equipmentColor} dimmed />
+        <EquipmentModel type={equipment.type} color={meta.color} dimmed />
       </group>
     );
   }
@@ -83,7 +80,7 @@ export function Equipment({ equipment }: EquipmentProps) {
     >
       <EquipmentModel
         type={equipment.type}
-        color={equipmentColor}
+        color={meta.color}
         emphasized={isActive}
         selected={isSelected}
       />
@@ -120,13 +117,13 @@ export function Equipment({ equipment }: EquipmentProps) {
                 color: "white",
                 padding: "8px 14px",
                 borderRadius: "10px",
-                border: `1px solid ${equipmentColor}88`,
-                borderLeft: `3px solid ${equipmentColor}`,
+                border: `1px solid ${meta.color}88`,
+                borderLeft: `3px solid ${meta.color}`,
                 fontSize: "15px",
                 fontFamily: "var(--font-geist-sans, sans-serif)",
                 whiteSpace: "nowrap",
                 pointerEvents: "none",
-                boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 20px ${equipmentColor}44`,
+                boxShadow: `0 8px 24px rgba(0,0,0,0.6), 0 0 20px ${meta.color}44`,
                 backdropFilter: "blur(8px)",
               }}
             >

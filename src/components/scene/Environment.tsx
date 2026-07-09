@@ -36,9 +36,8 @@ const MOOD_COLORS: Record<string, { sky: string[]; fog: string; sunColor: string
   },
 };
 
-export function Environment({ theme }: { theme?: PlantTheme }) {
-  const mood = theme?.mood ?? "industrial-grey";
-  const moodColors = MOOD_COLORS[mood] ?? MOOD_COLORS["industrial-grey"];
+export function Environment() {
+  const moodColors = MOOD_COLORS["industrial-grey"];
   // Sky gradient texture — uses mood colors
   const skyTexture = useMemo(() => {
     const canvas = document.createElement("canvas");
@@ -241,10 +240,9 @@ export function Ground() {
   );
 }
 
-/** Distant industrial backdrop — varies by plant type */
-export function IndustrialBackdrop({ theme }: { theme?: PlantTheme }) {
-  const backdropType = theme?.backdrop ?? "cooling-towers";
-  const structureColor = theme?.structureColor ?? "#3a3d42";
+/** Distant industrial backdrop — consistent across all plants */
+export function IndustrialBackdrop() {
+  const structureColor = "#3a3d42";
 
   return (
     <group>
@@ -263,125 +261,12 @@ export function IndustrialBackdrop({ theme }: { theme?: PlantTheme }) {
         </mesh>
       ))}
 
-      {/* Plant-specific backdrop elements */}
-      {backdropType === "cooling-towers" && (
-        <group>
-          {/* Hyperbolic cooling towers — signature of ammonia/syngas plants */}
-          {[
-            { x: -55, z: 20, h: 25, r: 6 },
-            { x: -48, z: 25, h: 22, r: 5 },
-            { x: 55, z: 25, h: 24, r: 5.5 },
-          ].map((t, i) => (
-            <mesh key={i} position={[t.x, t.h / 2, t.z]} castShadow>
-              <cylinderGeometry args={[t.r * 0.6, t.r, t.h, 24, 1, true]} />
-              <meshStandardMaterial color="#9ca3af" roughness={0.7} metalness={0.2} side={THREE.DoubleSide} />
-            </mesh>
-          ))}
-        </group>
-      )}
-
-      {backdropType === "acid-basins" && (
-        <group>
-          {/* Acid storage basins — low rectangular containment areas */}
-          {[
-            { x: -50, z: 20, w: 12, d: 8 },
-            { x: -40, z: 22, w: 10, d: 6 },
-            { x: 50, z: 25, w: 14, d: 10 },
-          ].map((b, i) => (
-            <group key={i}>
-              <mesh position={[b.x, 0.1, b.z]}>
-                <boxGeometry args={[b.w, 0.2, b.d]} />
-                <meshStandardMaterial color="#7a4a3a" roughness={0.8} />
-              </mesh>
-              {/* Containment wall */}
-              <mesh position={[b.x, 0.4, b.z]}>
-                <boxGeometry args={[b.w + 0.4, 0.6, 0.2]} />
-                <meshStandardMaterial color="#5a3a2a" roughness={0.9} />
-              </mesh>
-              <mesh position={[b.x, 0.4, b.z]}>
-                <boxGeometry args={[0.2, 0.6, b.d + 0.4]} />
-                <meshStandardMaterial color="#5a3a2a" roughness={0.9} />
-              </mesh>
-            </group>
-          ))}
-          {/* Tall stack for SO₂ emissions */}
-          <mesh position={[0, 18, -70]} castShadow>
-            <cylinderGeometry args={[2, 2.5, 36, 16]} />
-            <meshStandardMaterial color="#6b4540" roughness={0.7} metalness={0.3} />
-          </mesh>
-        </group>
-      )}
-
-      {backdropType === "refinery-towers" && (
-        <group>
-          {/* Tall distillation towers in the distance — refinery signature */}
-          {[
-            { x: -50, z: -30, h: 30, r: 2.5 },
-            { x: -45, z: -35, h: 35, r: 3 },
-            { x: 50, z: -30, h: 32, r: 2.8 },
-            { x: 45, z: -35, h: 28, r: 2.3 },
-          ].map((t, i) => (
-            <group key={i}>
-              <mesh position={[t.x, t.h / 2, t.z]} castShadow>
-                <cylinderGeometry args={[t.r, t.r, t.h, 16]} />
-                <meshStandardMaterial color="#7c6b4f" roughness={0.6} metalness={0.4} />
-              </mesh>
-              <mesh position={[t.x, t.h + t.r * 0.3, t.z]}>
-                <sphereGeometry args={[t.r, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
-                <meshStandardMaterial color="#9c8b6f" roughness={0.5} metalness={0.4} />
-              </mesh>
-            </group>
-          ))}
-          {/* Flare stack */}
-          <mesh position={[0, 20, -60]} castShadow>
-            <cylinderGeometry args={[0.8, 1, 40, 12]} />
-            <meshStandardMaterial color="#4b5563" roughness={0.6} metalness={0.4} />
-          </mesh>
-          <mesh position={[0, 41, -60]}>
-            <coneGeometry args={[1, 3, 8]} />
-            <meshBasicMaterial color="#fb923c" transparent opacity={0.7} />
-          </mesh>
-        </group>
-      )}
-
-      {backdropType === "fermentation-tanks" && (
-        <group>
-          {/* Large fermentation tanks — ethanol plant signature */}
-          {[
-            { x: -50, z: 10, r: 5, h: 12 },
-            { x: -40, z: 15, r: 5, h: 12 },
-            { x: -30, z: 12, r: 4.5, h: 10 },
-            { x: 50, z: 15, r: 5, h: 12 },
-            { x: 40, z: 20, r: 4.5, h: 11 },
-          ].map((t, i) => (
-            <group key={i}>
-              <mesh position={[t.x, t.h / 2, t.z]} castShadow>
-                <cylinderGeometry args={[t.r, t.r, t.h, 20]} />
-                <meshStandardMaterial color="#4a6b3a" roughness={0.6} metalness={0.3} />
-              </mesh>
-              <mesh position={[t.x, t.h + t.r * 0.2, t.z]}>
-                <coneGeometry args={[t.r, 1.5, 20]} />
-                <meshStandardMaterial color="#5a7b4a" roughness={0.5} metalness={0.3} />
-              </mesh>
-            </group>
-          ))}
-          {/* Grain storage silos */}
-          {[
-            { x: -60, z: -20, r: 3, h: 15 },
-            { x: -55, z: -25, r: 3, h: 14 },
-            { x: 60, z: -20, r: 3, h: 15 },
-          ].map((s, i) => (
-            <mesh key={i} position={[s.x, s.h / 2, s.z]} castShadow>
-              <cylinderGeometry args={[s.r, s.r, s.h, 16]} />
-              <meshStandardMaterial color="#d4a574" roughness={0.7} metalness={0.2} />
-            </mesh>
-          ))}
-        </group>
-      )}
-
-      {/* Common distant silos */}
+      {/* Consistent distant backdrop — silos, buildings, stacks */}
+      {/* Distant silos */}
       {[
         { x: -50, z: -55, r: 4, h: 20 },
+        { x: -44, z: -52, r: 3.5, h: 18 },
+        { x: 50, z: -55, r: 4, h: 22 },
         { x: 56, z: -50, r: 3, h: 16 },
       ].map((s, i) => (
         <group key={i}>
@@ -392,6 +277,23 @@ export function IndustrialBackdrop({ theme }: { theme?: PlantTheme }) {
           <mesh position={[s.x, s.h + s.r * 0.3, s.z]}>
             <sphereGeometry args={[s.r, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
             <meshStandardMaterial color="#b0b6bd" roughness={0.5} metalness={0.4} />
+          </mesh>
+        </group>
+      ))}
+      {/* Distant stacks */}
+      {[
+        { x: -25, z: -70, h: 25 },
+        { x: -20, z: -72, h: 22 },
+        { x: 25, z: -68, h: 28 },
+      ].map((s, i) => (
+        <group key={i}>
+          <mesh position={[s.x, s.h / 2, s.z]} castShadow>
+            <cylinderGeometry args={[1.2, 1.5, s.h, 16]} />
+            <meshStandardMaterial color="#6b7280" roughness={0.7} metalness={0.3} />
+          </mesh>
+          <mesh position={[s.x, s.h, s.z]}>
+            <cylinderGeometry args={[1.5, 1.5, 0.5, 16]} />
+            <meshStandardMaterial color="#4b5563" roughness={0.7} />
           </mesh>
         </group>
       ))}

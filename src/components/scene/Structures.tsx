@@ -8,7 +8,7 @@ import * as THREE from "three";
  * equipment floating on a plane.
  */
 
-const STEEL_COLOR = "#f59e0b"; // safety yellow for structural steel
+const STEEL_COLOR = "#6b7280"; // industrial grey steel (not yellow)
 const CONCRETE_COLOR = "#5a5852";
 const DARK_STEEL_COLOR = "#3a3d42";
 
@@ -30,38 +30,68 @@ export function PipeRackStructure({
   const midZ = (from.z + to.z) / 2;
   const bayLength = 5;
   const bays = Math.max(1, Math.floor(length / bayLength));
-  const steelMat = new THREE.MeshStandardMaterial({ color: STEEL_COLOR, roughness: 0.6, metalness: 0.3 });
+  const steelMat = new THREE.MeshStandardMaterial({ color: STEEL_COLOR, roughness: 0.5, metalness: 0.6 });
+  const darkSteelMat = new THREE.MeshStandardMaterial({ color: DARK_STEEL_COLOR, roughness: 0.5, metalness: 0.6 });
 
   return (
     <group position={[midX, 0, midZ]} rotation={[0, -angle, 0]}>
-      {/* Vertical columns at each bay */}
+      {/* Slender vertical columns (I-beam profile) at each bay */}
       {Array.from({ length: bays + 1 }).map((_, i) => {
         const x = -length / 2 + i * (length / bays);
         return (
           <group key={i}>
+            {/* Left column — slender cylinder */}
             <mesh position={[x, height / 2, -1.5]} castShadow material={steelMat}>
-              <boxGeometry args={[0.25, height, 0.25]} />
+              <cylinderGeometry args={[0.08, 0.08, height, 8]} />
             </mesh>
+            {/* Right column */}
             <mesh position={[x, height / 2, 1.5]} castShadow material={steelMat}>
-              <boxGeometry args={[0.25, height, 0.25]} />
+              <cylinderGeometry args={[0.08, 0.08, height, 8]} />
+            </mesh>
+            {/* Base plates */}
+            <mesh position={[x, 0.05, -1.5]} material={darkSteelMat}>
+              <boxGeometry args={[0.3, 0.1, 0.3]} />
+            </mesh>
+            <mesh position={[x, 0.05, 1.5]} material={darkSteelMat}>
+              <boxGeometry args={[0.3, 0.1, 0.3]} />
             </mesh>
           </group>
         );
       })}
-      {/* Horizontal beams at each level */}
+      {/* Slim horizontal beams at each level — pipes rest on these */}
       {Array.from({ length: levels }).map((_, level) => {
         const y = height * ((level + 1) / levels);
         return (
           <group key={level}>
             <mesh position={[0, y, -1.5]} castShadow material={steelMat}>
-              <boxGeometry args={[length + 0.3, 0.3, 0.3]} />
+              <boxGeometry args={[length + 0.2, 0.12, 0.12]} />
             </mesh>
             <mesh position={[0, y, 1.5]} castShadow material={steelMat}>
-              <boxGeometry args={[length + 0.3, 0.3, 0.3]} />
+              <boxGeometry args={[length + 0.2, 0.12, 0.12]} />
             </mesh>
-            {/* Cross-bracing */}
-            <mesh position={[0, y, 0]} material={steelMat}>
-              <boxGeometry args={[length + 0.3, 0.15, 3]} />
+            {/* Cross-ties between beams (slender, not chunky) */}
+            {Array.from({ length: bays }).map((_, j) => {
+              const tx = -length / 2 + j * (length / bays) + length / bays / 2;
+              return (
+                <mesh key={j} position={[tx, y, 0]} material={steelMat}>
+                  <boxGeometry args={[0.08, 0.08, 3]} />
+                </mesh>
+              );
+            })}
+          </group>
+        );
+      })}
+      {/* Diagonal bracing on the sides for structural rigidity */}
+      {Array.from({ length: bays }).map((_, i) => {
+        const x1 = -length / 2 + i * (length / bays);
+        const x2 = x1 + length / bays;
+        return (
+          <group key={`brace-${i}`}>
+            <mesh position={[(x1 + x2) / 2, height * 0.5, -1.5]} rotation={[0, 0, Math.PI / 4]} material={steelMat}>
+              <boxGeometry args={[0.06, length / bays * 1.4, 0.06]} />
+            </mesh>
+            <mesh position={[(x1 + x2) / 2, height * 0.5, 1.5]} rotation={[0, 0, Math.PI / 4]} material={steelMat}>
+              <boxGeometry args={[0.06, length / bays * 1.4, 0.06]} />
             </mesh>
           </group>
         );
