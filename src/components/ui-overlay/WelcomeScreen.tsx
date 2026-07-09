@@ -42,7 +42,7 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
 
   return (
     <div className="absolute inset-0 z-30 flex h-screen flex-col bg-[#08090c]">
-      {/* Minimal header */}
+      {/* Minimal header — top */}
       <header className="flex items-center justify-between px-5 py-3.5">
         <div className="flex items-center gap-2.5">
           <div className="flex h-7 w-7 items-center justify-center rounded-md bg-slate-100">
@@ -59,16 +59,19 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
         </button>
       </header>
 
-      {/* Centered content — input at center, cards below */}
-      <div className="flex flex-1 flex-col items-center justify-center px-6 pb-6">
-        {/* Centered input */}
-        <div className="w-full max-w-lg">
+      {/* Large empty space at top — splash screen feel */}
+      <div className="flex-1" />
+
+      {/* Bottom-aligned content — input + cards pushed to lower third */}
+      <div className="px-6 pb-8">
+        <div className="mx-auto w-full max-w-2xl">
+          {/* Input */}
           <form
             onSubmit={(e) => {
               e.preventDefault();
               handleCommand(command);
             }}
-            className="relative"
+            className="relative mb-5"
           >
             <div className="flex items-center gap-2 rounded-xl border border-slate-800 bg-slate-950/60 px-3 py-3 transition-colors focus-within:border-slate-600">
               <button
@@ -101,11 +104,9 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
               </button>
             </div>
           </form>
-        </div>
 
-        {/* Plant cards below */}
-        <div className="mt-8 w-full max-w-3xl">
-          <div className="mb-2.5 flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-slate-600">
+          {/* Plant cards — directly below input */}
+          <div className="mb-2 flex items-center gap-2 text-[9px] uppercase tracking-[0.2em] text-slate-600">
             <div className="h-px flex-1 bg-slate-800/60" />
             <span>or pick a plant</span>
             <div className="h-px flex-1 bg-slate-800/60" />

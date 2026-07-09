@@ -22,6 +22,13 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["ammonia", "haber", "bosch", "nh3", "synthesis gas", "fertiliser", "fertilizer"],
     difficulty: "Beginner",
     estimatedTime: 12,
+    theme: {
+      equipmentColor: "#475569",
+      structureColor: "#f59e0b",
+      accent: "#3b82f6",
+      mood: "industrial-grey",
+      backdrop: "cooling-towers",
+    },
     equipment: [
       // Area A: Syngas Prep (west)
       { id: "nh3-feed-tank", type: "tank", name: "Feed Tank (H₂ + N₂ mix)", position: [-12, 0, 6], context: "Holds the stoichiometric synthesis-gas mixture (3 H₂ : 1 N₂) before compression." },
@@ -79,6 +86,13 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["distillation", "distill", "separation", "column", "reflux", "binary", "tray"],
     difficulty: "Beginner",
     estimatedTime: 15,
+    theme: {
+      equipmentColor: "#7c6b4f",
+      structureColor: "#d97706",
+      accent: "#a855f7",
+      mood: "clean-refinery",
+      backdrop: "refinery-towers",
+    },
     equipment: [
       // Area A: Feed Prep (south)
       { id: "dist-feed-tank", type: "tank", name: "Feed Tank", position: [-10, 0, -6], context: "Holds the binary feed mixture (e.g. methanol/water) at ambient temperature." },
@@ -138,6 +152,13 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["sulfuric", "sulphuric", "sulfur", "sulphur", "h2so4", "contact process", "acid"],
     difficulty: "Intermediate",
     estimatedTime: 18,
+    theme: {
+      equipmentColor: "#7a4a3a",
+      structureColor: "#92400e",
+      accent: "#ef4444",
+      mood: "warm-rust",
+      backdrop: "acid-basins",
+    },
     equipment: [
       // Area A: Sulfur Handling (west)
       { id: "h2so4-sulfur-tank", type: "storageTank", name: "Sulfur Storage", position: [-12, 0, -4], context: "Molten elemental sulfur stored heated, ready to be burned." },
@@ -201,6 +222,13 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["ethanol", "alcohol", "fermentation", "bioethanol", "yeast", "beer"],
     difficulty: "Beginner",
     estimatedTime: 14,
+    theme: {
+      equipmentColor: "#4a6b3a",
+      structureColor: "#65a30d",
+      accent: "#10b981",
+      mood: "fermentation-green",
+      backdrop: "fermentation-tanks",
+    },
     equipment: [
       // Area A: Fermentation (north)
       { id: "etoh-feed-tank", type: "tank", name: "Sugar Feed Tank", position: [-10, 0, 4], context: "Holds the sugar solution (molasses or glucose) diluted to fermentation strength." },

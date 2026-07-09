@@ -130,6 +130,23 @@ export interface PlantTemplate {
   difficulty?: "Beginner" | "Intermediate" | "Advanced";
   /** Estimated tour time in minutes */
   estimatedTime?: number;
+  /** Visual theme — colors the equipment, pipes, and environment for this plant */
+  theme?: PlantTheme;
+}
+
+export interface PlantTheme {
+  /** Primary equipment color (vessels, tanks) */
+  equipmentColor: string;
+  /** Secondary structural color (pipe racks, platforms) */
+  structureColor: string;
+  /** Accent color for this plant's UI (labels, highlights) */
+  accent: string;
+  /** Pipe color overrides by stream type */
+  pipeColors?: Record<string, string>;
+  /** Environment mood — affects sky, fog, lighting */
+  mood: "industrial-grey" | "warm-rust" | "clean-refinery" | "fermentation-green";
+  /** Distant backdrop style */
+  backdrop: "cooling-towers" | "acid-basins" | "refinery-towers" | "fermentation-tanks";
 }
 
 export type DisplayState = "visible" | "highlighted" | "hidden";
