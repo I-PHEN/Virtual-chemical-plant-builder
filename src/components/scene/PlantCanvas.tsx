@@ -2,7 +2,7 @@
 
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { PerspectiveCamera } from "@react-three/drei";
+import { PerspectiveCamera, Environment as DreiEnvironment, ContactShadows } from "@react-three/drei";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { Equipment } from "./Equipment";
 import { PipeNetwork } from "./PipeNetwork";
@@ -34,6 +34,17 @@ export function PlantCanvas() {
         <Ground />
         <IndustrialBackdrop />
         <CameraController />
+        {/* Environment HDRI for realistic metal reflections */}
+        <DreiEnvironment preset="warehouse" />
+        {/* Contact shadows so equipment doesn't look like it's floating */}
+        <ContactShadows
+          position={[0, 0.01, 0]}
+          opacity={0.5}
+          scale={80}
+          blur={2}
+          far={20}
+          resolution={512}
+        />
         {currentPlant && (
           <>
             {/* Concrete foundations under each equipment */}
