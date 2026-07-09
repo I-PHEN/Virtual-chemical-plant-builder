@@ -232,50 +232,52 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
             </div>
           </div>
         ) : (
-          /* Message thread — no bubbles, just text with avatars (Claude style) */
-          <>
-            <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
-              <div className="mx-auto max-w-2xl space-y-5">
+          /* Input stays at top (centered), messages flow below it */
+          <div className="flex flex-1 flex-col px-6 pt-[12vh] pb-6">
+            {/* Input — stays in its original centered position */}
+            <div className="mx-auto w-full max-w-xl">
+              <p className="mb-3 text-center text-[11px] text-slate-500">
+                What do you want to explore?
+              </p>
+              <form
+                onSubmit={(e) => { e.preventDefault(); sendMessage(command); }}
+                className="relative"
+              >
+                <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#2a2a2a] px-3 py-3 transition-colors focus-within:border-white/20">
+                  <button type="button" aria-label="Voice input" className="flex h-6 w-6 items-center justify-center rounded-md text-slate-500 transition-colors hover:text-sky-300">
+                    <Mic className="h-4 w-4" />
+                  </button>
+                  <input
+                    value={command}
+                    onChange={(e) => setCommand(e.target.value)}
+                    placeholder="Build an ammonia plant…"
+                    disabled={isGenerating}
+                    className="flex-1 bg-transparent text-[14px] text-white placeholder:text-slate-600 outline-none disabled:opacity-50"
+                  />
+                  <button
+                    type="submit"
+                    disabled={isGenerating || !command.trim()}
+                    aria-label="Send"
+                    className={cn(
+                      "flex h-6 w-6 items-center justify-center rounded-md transition-colors",
+                      command.trim() && !isGenerating ? "bg-sky-500 text-white hover:bg-sky-400" : "bg-white/5 text-slate-600"
+                    )}
+                  >
+                    <ArrowUp className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            {/* Messages flow below the input, scrollable */}
+            <div ref={scrollRef} className="mx-auto mt-6 w-full max-w-xl flex-1 overflow-y-auto">
+              <div className="space-y-3 pb-4">
                 {messages.map((msg) => (
-                  <MessageRow key={msg.id} message={msg} onEnterSim={() => onBuild("__enter_sim__")} />
+                  <MessageBubble key={msg.id} message={msg} onEnterSim={() => onBuild("__enter_sim__")} />
                 ))}
               </div>
             </div>
-
-            {/* Input fixed at bottom */}
-            <div className="px-6 pb-4">
-              <div className="mx-auto max-w-2xl">
-                <form
-                  onSubmit={(e) => { e.preventDefault(); sendMessage(command); }}
-                  className="relative"
-                >
-                  <div className="flex items-center gap-2 rounded-xl border border-white/10 bg-[#2a2a2a] px-3 py-2.5 transition-colors focus-within:border-white/20">
-                    <button type="button" aria-label="Voice input" className="flex h-5 w-5 items-center justify-center rounded-md text-slate-500 transition-colors hover:text-sky-300">
-                      <Mic className="h-3.5 w-3.5" />
-                    </button>
-                    <input
-                      value={command}
-                      onChange={(e) => setCommand(e.target.value)}
-                      placeholder="Ask a follow-up…"
-                      disabled={isGenerating}
-                      className="flex-1 bg-transparent text-[13px] text-white placeholder:text-slate-600 outline-none disabled:opacity-50"
-                    />
-                    <button
-                      type="submit"
-                      disabled={isGenerating || !command.trim()}
-                      aria-label="Send"
-                      className={cn(
-                        "flex h-5 w-5 items-center justify-center rounded-md transition-colors",
-                        command.trim() && !isGenerating ? "bg-sky-500 text-white hover:bg-sky-400" : "bg-white/5 text-slate-600"
-                      )}
-                    >
-                      <ArrowUp className="h-3 w-3" />
-                    </button>
-                  </div>
-                </form>
-              </div>
-            </div>
-          </>
+          </div>
         )}
       </div>
 
@@ -284,49 +286,50 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
   );
 }
 
-/** Message row — no bubbles, just text aligned left/right with small avatars */
-function MessageRow({ message, onEnterSim }: { message: ChatMessage; onEnterSim: () => void }) {
+/** Nice chat bubbles — user on right (sky), AI on left (dark glass) */
+function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterSim: () => void }) {
   if (message.role === "user") {
     return (
-      <div className="flex justify-end gap-2.5">
-        <div className="max-w-[75%] pt-0.5">
-          <p className="text-[13px] leading-relaxed text-slate-200">{message.content}</p>
-        </div>
-        <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-[#3a3a3a]">
-          <User className="h-3 w-3 text-slate-400" />
+      <div className="flex justify-end">
+        <div className="max-w-[80%] rounded-2xl rounded-br-md bg-sky-500 px-4 py-2.5 text-[13px] leading-relaxed text-white shadow-lg shadow-sky-500/10">
+          {message.content}
         </div>
       </div>
     );
   }
 
   return (
-    <div className="flex justify-start gap-2.5">
-      <div className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-full bg-sky-500/15 ring-1 ring-sky-500/30">
-        <Bot className="h-3 w-3 text-sky-300" />
-      </div>
-      <div className="max-w-[75%] pt-0.5">
-        <p className="text-[13px] leading-relaxed text-slate-200">{message.content}</p>
+    <div className="flex justify-start">
+      <div className="max-w-[85%]">
+        <div className="rounded-2xl rounded-bl-md border border-white/10 bg-[#2a2a2a] px-4 py-2.5 text-[13px] leading-relaxed text-slate-100 shadow-lg">
+          {message.content}
+        </div>
 
-        {/* Building status */}
+        {/* Building status — inline below the bubble */}
         {message.status === "building" && (
-          <div className="mt-2 flex items-center gap-2 text-[11px] text-slate-500">
-            <Loader2 className="h-3 w-3 animate-spin text-sky-400" />
-            <span>Building plant…</span>
-            <div className="h-0.5 w-20 overflow-hidden rounded-full bg-black/40">
+          <div className="mt-2 flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-3 py-2">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400" />
+            <span className="text-[11px] font-medium text-sky-300">Building plant…</span>
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/40">
               <div className="h-full w-1/3 animate-pulse rounded-full bg-sky-400" />
             </div>
           </div>
         )}
 
-        {/* Ready link */}
+        {/* Ready card — green with enter button */}
         {message.status === "ready" && (
-          <button
-            onClick={onEnterSim}
-            className="mt-2 inline-flex items-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-1.5 text-[12px] font-medium text-white transition-colors hover:bg-emerald-400"
-          >
-            <CheckCircle2 className="h-3 w-3" />
-            Enter simulation <ArrowRight className="h-3 w-3" />
-          </button>
+          <div className="mt-2 rounded-lg border border-emerald-500/30 bg-emerald-500/5 p-3">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-4 w-4 text-emerald-400" />
+              <span className="text-[12px] font-medium text-emerald-300">Plant ready</span>
+            </div>
+            <button
+              onClick={onEnterSim}
+              className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-lg bg-emerald-500 px-3 py-2 text-[12px] font-medium text-white transition-colors hover:bg-emerald-400"
+            >
+              Enter simulation <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </div>
         )}
       </div>
     </div>
