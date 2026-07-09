@@ -129,6 +129,21 @@ export function AmbientAudio({ active }: { active: boolean }) {
       window.removeEventListener("click", startAudio);
       window.removeEventListener("touchstart", startAudio);
       window.removeEventListener("keydown", startAudio);
+      // Stop all audio and close the context immediately
+      if (gainRef.current && ctxRef.current) {
+        try {
+          gainRef.current.gain.cancelScheduledValues(ctxRef.current.currentTime);
+          gainRef.current.gain.setValueAtTime(0, ctxRef.current.currentTime);
+        } catch { /* ignore */ }
+      }
+      if (ctxRef.current) {
+        try {
+          ctxRef.current.close();
+        } catch { /* ignore */ }
+        ctxRef.current = null;
+        gainRef.current = null;
+      }
+      startedRef.current = false;
     };
   }, [active]);
 

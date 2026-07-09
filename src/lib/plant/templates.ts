@@ -1,14 +1,11 @@
 import type { PlantTemplate } from "./types";
 
 /**
- * Real-world plant templates with proper industrial layouts.
+ * Real-world plant templates with SPREAD-OUT layouts.
  *
- * Each plant follows real plot plan principles:
- *  - Equipment grouped in process areas
- *  - Pipe rack corridors running between areas
- *  - Tank farms bunded for spill containment
- *  - Tall equipment on steel platforms
- *  - Maintenance access corridors
+ * Equipment is spaced 10-15m apart (3-4x the previous compact spacing)
+ * to match real industrial plant layouts. Process flow is visible from
+ * above, with clear maintenance access corridors between areas.
  */
 
 export const PLANT_TEMPLATES: PlantTemplate[] = [
@@ -22,26 +19,19 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["ammonia", "haber", "bosch", "nh3", "synthesis gas", "fertiliser", "fertilizer"],
     difficulty: "Beginner",
     estimatedTime: 12,
-    theme: {
-      equipmentColor: "#475569",
-      structureColor: "#f59e0b",
-      accent: "#3b82f6",
-      mood: "industrial-grey",
-      backdrop: "cooling-towers",
-    },
     equipment: [
-      // Area A: Syngas Prep (west)
-      { id: "nh3-feed-tank", type: "tank", name: "Feed Tank (H₂ + N₂ mix)", position: [-12, 0, 6], context: "Holds the stoichiometric synthesis-gas mixture (3 H₂ : 1 N₂) before compression." },
-      { id: "nh3-compressor", type: "compressor", name: "Syngas Compressor K-101", position: [-8, 0, 2], context: "Raises the synthesis gas from near-atmospheric to roughly 150 bar." },
-      { id: "nh3-feedheater", type: "heatExchanger", name: "Feed/Effluent Exchanger E-101", position: [-4, 0, -2], context: "Recovers heat from the hot reactor effluent to preheat the cold feed." },
+      // Area A: Syngas Prep (far west)
+      { id: "nh3-feed-tank", type: "tank", name: "Feed Tank (H₂ + N₂ mix)", position: [-36, 0, 12], context: "Holds the stoichiometric synthesis-gas mixture (3 H₂ : 1 N₂) before compression." },
+      { id: "nh3-compressor", type: "compressor", name: "Syngas Compressor K-101", position: [-24, 0, 6], context: "Raises the synthesis gas from near-atmospheric to roughly 150 bar." },
+      { id: "nh3-feedheater", type: "heatExchanger", name: "Feed/Effluent Exchanger E-101", position: [-12, 0, -6], context: "Recovers heat from the hot reactor effluent to preheat the cold feed." },
 
       // Area B: Synthesis Loop (center)
-      { id: "nh3-reactor", type: "reactor", name: "Ammonia Converter R-101", position: [0, 0, -4], context: "Fixed-bed catalytic reactor with iron catalyst. Exothermic: N₂ + 3 H₂ ⇌ 2 NH₃." },
-      { id: "nh3-cooler", type: "cooler", name: "Ammonia Condenser E-102", position: [4, 0, -2], context: "Cools the reactor effluent so ammonia condenses while unreacted gas stays gaseous." },
+      { id: "nh3-reactor", type: "reactor", name: "Ammonia Converter R-101", position: [0, 0, -12], context: "Fixed-bed catalytic reactor with iron catalyst. Exothermic: N₂ + 3 H₂ ⇌ 2 NH₃." },
+      { id: "nh3-cooler", type: "cooler", name: "Ammonia Condenser E-102", position: [12, 0, -6], context: "Cools the reactor effluent so ammonia condenses while unreacted gas stays gaseous." },
 
-      // Area C: Separation + Storage (east, bunded)
-      { id: "nh3-separator", type: "separator", name: "Ammonia Separator V-101", position: [8, 0, 2], context: "Splits liquid ammonia (bottom) from unreacted recycle gas (top)." },
-      { id: "nh3-storage", type: "storageTank", name: "Ammonia Storage Tank", position: [12, 0, 6], context: "Refrigerated atmospheric tank storing liquid ammonia before dispatch." },
+      // Area C: Separation + Storage (far east, bunded)
+      { id: "nh3-separator", type: "separator", name: "Ammonia Separator V-101", position: [24, 0, 6], context: "Splits liquid ammonia (bottom) from unreacted recycle gas (top)." },
+      { id: "nh3-storage", type: "storageTank", name: "Ammonia Storage Tank", position: [36, 0, 12], context: "Refrigerated atmospheric tank storing liquid ammonia before dispatch." },
     ],
     pipes: [
       { id: "nh3-p1", from: "nh3-feed-tank", to: "nh3-compressor", stream: "feed", routing: "direct" },
@@ -53,15 +43,15 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
       { id: "nh3-p7", from: "nh3-separator", to: "nh3-storage", stream: "product", routing: "direct" },
     ],
     areas: [
-      { id: "nh3-area-a", name: "Syngas Preparation", kind: "process", footprint: { x: -10, z: 4, width: 12, depth: 10 }, equipmentIds: ["nh3-feed-tank", "nh3-compressor", "nh3-feedheater"] },
-      { id: "nh3-area-b", name: "Synthesis Loop", kind: "process", footprint: { x: 2, z: -3, width: 10, depth: 8 }, equipmentIds: ["nh3-reactor", "nh3-cooler"] },
-      { id: "nh3-area-c", name: "Separation & Storage", kind: "storage", footprint: { x: 10, z: 4, width: 10, depth: 10 }, bunded: true, equipmentIds: ["nh3-separator", "nh3-storage"] },
+      { id: "nh3-area-a", name: "Syngas Preparation", kind: "process", footprint: { x: -30, z: 9, width: 24, depth: 18 }, equipmentIds: ["nh3-feed-tank", "nh3-compressor", "nh3-feedheater"] },
+      { id: "nh3-area-b", name: "Synthesis Loop", kind: "process", footprint: { x: 6, z: -9, width: 18, depth: 14 }, equipmentIds: ["nh3-reactor", "nh3-cooler"] },
+      { id: "nh3-area-c", name: "Separation & Storage", kind: "storage", footprint: { x: 30, z: 9, width: 18, depth: 18 }, bunded: true, equipmentIds: ["nh3-separator", "nh3-storage"] },
     ],
     racks: [
-      { id: "nh3-rack1", from: { x: -8, z: 0 }, to: { x: 8, z: 0 }, height: 6, levels: 2 },
+      { id: "nh3-rack1", from: { x: -24, z: 0 }, to: { x: 24, z: 0 }, height: 7, levels: 2 },
     ],
     structures: [
-      { id: "nh3-platform1", kind: "platform", position: [0, 0, -4], size: [3, 4, 3] },
+      { id: "nh3-platform1", kind: "platform", position: [0, 0, -12], size: [4, 5, 4] },
     ],
     processOverview:
       "Nitrogen and hydrogen are compressed to ~150 bar, preheated by exchange with the hot reactor effluent, and passed over an iron catalyst in the converter. Only a fraction converts per pass, so the unreacted gas is recycled. The effluent is cooled so ammonia condenses; the liquid is separated and stored.",
@@ -86,27 +76,20 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["distillation", "distill", "separation", "column", "reflux", "binary", "tray"],
     difficulty: "Beginner",
     estimatedTime: 15,
-    theme: {
-      equipmentColor: "#7c6b4f",
-      structureColor: "#d97706",
-      accent: "#a855f7",
-      mood: "clean-refinery",
-      backdrop: "refinery-towers",
-    },
     equipment: [
-      // Area A: Feed Prep (south)
-      { id: "dist-feed-tank", type: "tank", name: "Feed Tank", position: [-10, 0, -6], context: "Holds the binary feed mixture (e.g. methanol/water) at ambient temperature." },
-      { id: "dist-pump", type: "pump", name: "Feed Pump P-101", position: [-6, 0, -3], context: "Pumps the feed through the preheater and into the column at the feed tray." },
-      { id: "dist-preheater", type: "heatExchanger", name: "Feed Preheater E-101", position: [-2, 0, 0], context: "Preheats the feed close to its bubble point." },
+      // Area A: Feed Prep (far south)
+      { id: "dist-feed-tank", type: "tank", name: "Feed Tank", position: [-30, 0, -18], context: "Holds the binary feed mixture (e.g. methanol/water) at ambient temperature." },
+      { id: "dist-pump", type: "pump", name: "Feed Pump P-101", position: [-18, 0, -9], context: "Pumps the feed through the preheater and into the column at the feed tray." },
+      { id: "dist-preheater", type: "heatExchanger", name: "Feed Preheater E-101", position: [-6, 0, 0], context: "Preheats the feed close to its bubble point." },
 
       // Area B: Column Structure (center, on platform)
-      { id: "dist-column", type: "column", name: "Distillation Column C-101", position: [3, 0, 2], context: "Tray column with rectifying section above the feed and stripping section below." },
-      { id: "dist-condenser", type: "cooler", name: "Overhead Condenser E-102", position: [8, 0, -1], context: "Condenses the overhead vapour using cooling water." },
-      { id: "dist-reboiler", type: "heatExchanger", name: "Reboiler E-103", position: [3, 0, 7], context: "Vaporises part of the bottom liquid using steam to drive the stripping section." },
+      { id: "dist-column", type: "column", name: "Distillation Column C-101", position: [9, 0, 6], context: "Tray column with rectifying section above the feed and stripping section below." },
+      { id: "dist-condenser", type: "cooler", name: "Overhead Condenser E-102", position: [24, 0, -3], context: "Condenses the overhead vapour using cooling water." },
+      { id: "dist-reboiler", type: "heatExchanger", name: "Reboiler E-103", position: [9, 0, 21], context: "Vaporises part of the bottom liquid using steam to drive the stripping section." },
 
-      // Area C: Product Tank Farm (bunded)
-      { id: "dist-distillate-tank", type: "storageTank", name: "Distillate Receiver", position: [9, 0, 5], context: "Receives the light (more volatile) product from the top." },
-      { id: "dist-bottoms-tank", type: "storageTank", name: "Bottoms Receiver", position: [-1, 0, 9], context: "Receives the heavy (less volatile) product from the bottom." },
+      // Area C: Product Tank Farm (bunded, far north)
+      { id: "dist-distillate-tank", type: "storageTank", name: "Distillate Receiver", position: [27, 0, 15], context: "Receives the light (more volatile) product from the top." },
+      { id: "dist-bottoms-tank", type: "storageTank", name: "Bottoms Receiver", position: [-3, 0, 27], context: "Receives the heavy (less volatile) product from the bottom." },
     ],
     pipes: [
       { id: "dist-p1", from: "dist-feed-tank", to: "dist-pump", stream: "feed", routing: "direct" },
@@ -118,16 +101,16 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
       { id: "dist-p7", from: "dist-reboiler", to: "dist-bottoms-tank", stream: "product", routing: "rack", rackId: "dist-rack1" },
     ],
     areas: [
-      { id: "dist-area-a", name: "Feed Preparation", kind: "process", footprint: { x: -8, z: -4, width: 12, depth: 8 }, equipmentIds: ["dist-feed-tank", "dist-pump", "dist-preheater"] },
-      { id: "dist-area-b", name: "Column Structure", kind: "process", footprint: { x: 5, z: 2, width: 10, depth: 10 }, equipmentIds: ["dist-column", "dist-condenser", "dist-reboiler"] },
-      { id: "dist-area-c", name: "Product Tank Farm", kind: "storage", footprint: { x: 4, z: 7, width: 14, depth: 6 }, bunded: true, equipmentIds: ["dist-distillate-tank", "dist-bottoms-tank"] },
+      { id: "dist-area-a", name: "Feed Preparation", kind: "process", footprint: { x: -24, z: -12, width: 24, depth: 18 }, equipmentIds: ["dist-feed-tank", "dist-pump", "dist-preheater"] },
+      { id: "dist-area-b", name: "Column Structure", kind: "process", footprint: { x: 15, z: 6, width: 24, depth: 24 }, equipmentIds: ["dist-column", "dist-condenser", "dist-reboiler"] },
+      { id: "dist-area-c", name: "Product Tank Farm", kind: "storage", footprint: { x: 12, z: 21, width: 36, depth: 12 }, bunded: true, equipmentIds: ["dist-distillate-tank", "dist-bottoms-tank"] },
     ],
     racks: [
-      { id: "dist-rack1", from: { x: -6, z: 1 }, to: { x: 8, z: 1 }, height: 6, levels: 2 },
+      { id: "dist-rack1", from: { x: -18, z: 3 }, to: { x: 24, z: 3 }, height: 7, levels: 2 },
     ],
     structures: [
-      { id: "dist-platform1", kind: "platform", position: [3, 0, 2], size: [4, 4, 4] },
-      { id: "dist-stairway1", kind: "stairway", position: [6, 0, 5], rotation: Math.PI, height: 4 },
+      { id: "dist-platform1", kind: "platform", position: [9, 0, 6], size: [5, 5, 5] },
+      { id: "dist-stairway1", kind: "stairway", position: [18, 0, 15], rotation: Math.PI, height: 5 },
     ],
     processOverview:
       "Feed is pumped from the tank, preheated near its bubble point, and fed to the middle of the column. Vapour rising from the reboiler enriches in the light component. The overhead vapour is condensed — part returned as reflux, part taken as distillate. The bottom liquid is vaporised in the reboiler and the remainder withdrawn as bottoms product.",
@@ -152,29 +135,22 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["sulfuric", "sulphuric", "sulfur", "sulphur", "h2so4", "contact process", "acid"],
     difficulty: "Intermediate",
     estimatedTime: 18,
-    theme: {
-      equipmentColor: "#7a4a3a",
-      structureColor: "#92400e",
-      accent: "#ef4444",
-      mood: "warm-rust",
-      backdrop: "acid-basins",
-    },
     equipment: [
-      // Area A: Sulfur Handling (west)
-      { id: "h2so4-sulfur-tank", type: "storageTank", name: "Sulfur Storage", position: [-12, 0, -4], context: "Molten elemental sulfur stored heated, ready to be burned." },
-      { id: "h2so4-burner", type: "heater", name: "Sulfur Burner B-101", position: [-8, 0, 0], context: "Burns molten sulfur with dry air to produce SO₂." },
-      { id: "h2so4-compressor", type: "compressor", name: "Air Blower K-101", position: [-10, 0, 4], context: "Forces dried combustion air through the burner and train." },
+      // Area A: Sulfur Handling (far west)
+      { id: "h2so4-sulfur-tank", type: "storageTank", name: "Sulfur Storage", position: [-36, 0, -12], context: "Molten elemental sulfur stored heated, ready to be burned." },
+      { id: "h2so4-burner", type: "heater", name: "Sulfur Burner B-101", position: [-24, 0, 0], context: "Burns molten sulfur with dry air to produce SO₂." },
+      { id: "h2so4-compressor", type: "compressor", name: "Air Blower K-101", position: [-30, 0, 12], context: "Forces dried combustion air through the burner and train." },
 
       // Area B: Converter Structure (center, on platform)
-      { id: "h2so4-converter", type: "reactor", name: "SO₂ Converter R-101", position: [-2, 0, 2], context: "Multi-bed catalytic converter with vanadium pentoxide. Exothermic: 2 SO₂ + O₂ → 2 SO₃." },
-      { id: "h2so4-economiser", type: "heatExchanger", name: "Gas Economiser E-101", position: [2, 0, -2], context: "Recovers heat from the converter effluent to preheat incoming gas." },
+      { id: "h2so4-converter", type: "reactor", name: "SO₂ Converter R-101", position: [-6, 0, 6], context: "Multi-bed catalytic converter with vanadium pentoxide. Exothermic: 2 SO₂ + O₂ → 2 SO₃." },
+      { id: "h2so4-economiser", type: "heatExchanger", name: "Gas Economiser E-101", position: [6, 0, -6], context: "Recovers heat from the converter effluent to preheat incoming gas." },
 
       // Area C: Absorption (east)
-      { id: "h2so4-absorber", type: "column", name: "Absorption Tower C-101", position: [6, 0, 2], context: "Packed tower where concentrated sulfuric acid absorbs SO₃." },
-      { id: "h2so4-cooler", type: "cooler", name: "Acid Cooler E-102", position: [4, 0, 7], context: "Removes heat of absorption from the circulating acid." },
+      { id: "h2so4-absorber", type: "column", name: "Absorption Tower C-101", position: [18, 0, 6], context: "Packed tower where concentrated sulfuric acid absorbs SO₃." },
+      { id: "h2so4-cooler", type: "cooler", name: "Acid Cooler E-102", position: [12, 0, 21], context: "Removes heat of absorption from the circulating acid." },
 
-      // Area D: Product Storage (bunded)
-      { id: "h2so4-product", type: "storageTank", name: "Product Acid Storage", position: [10, 0, 6], context: "Stores finished 98% sulfuric acid ready for dispatch." },
+      // Area D: Product Storage (far east, bunded)
+      { id: "h2so4-product", type: "storageTank", name: "Product Acid Storage", position: [30, 0, 18], context: "Stores finished 98% sulfuric acid ready for dispatch." },
     ],
     pipes: [
       { id: "h2so4-p1", from: "h2so4-sulfur-tank", to: "h2so4-burner", stream: "feed", routing: "direct" },
@@ -186,17 +162,17 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
       { id: "h2so4-p7", from: "h2so4-cooler", to: "h2so4-product", stream: "product", routing: "rack", rackId: "h2so4-rack1" },
     ],
     areas: [
-      { id: "h2so4-area-a", name: "Sulfur Handling", kind: "process", footprint: { x: -10, z: 0, width: 10, depth: 12 }, bunded: true, equipmentIds: ["h2so4-sulfur-tank", "h2so4-burner", "h2so4-compressor"] },
-      { id: "h2so4-area-b", name: "Converter Structure", kind: "process", footprint: { x: 0, z: 0, width: 10, depth: 8 }, equipmentIds: ["h2so4-converter", "h2so4-economiser"] },
-      { id: "h2so4-area-c", name: "Absorption Tower", kind: "process", footprint: { x: 6, z: 4, width: 8, depth: 10 }, bunded: true, equipmentIds: ["h2so4-absorber", "h2so4-cooler"] },
-      { id: "h2so4-area-d", name: "Product Acid Storage", kind: "storage", footprint: { x: 11, z: 6, width: 8, depth: 8 }, bunded: true, equipmentIds: ["h2so4-product"] },
+      { id: "h2so4-area-a", name: "Sulfur Handling", kind: "process", footprint: { x: -30, z: 0, width: 24, depth: 30 }, bunded: true, equipmentIds: ["h2so4-sulfur-tank", "h2so4-burner", "h2so4-compressor"] },
+      { id: "h2so4-area-b", name: "Converter Structure", kind: "process", footprint: { x: 0, z: 0, width: 24, depth: 18 }, equipmentIds: ["h2so4-converter", "h2so4-economiser"] },
+      { id: "h2so4-area-c", name: "Absorption Tower", kind: "process", footprint: { x: 18, z: 12, width: 18, depth: 24 }, bunded: true, equipmentIds: ["h2so4-absorber", "h2so4-cooler"] },
+      { id: "h2so4-area-d", name: "Product Acid Storage", kind: "storage", footprint: { x: 33, z: 18, width: 18, depth: 18 }, bunded: true, equipmentIds: ["h2so4-product"] },
     ],
     racks: [
-      { id: "h2so4-rack1", from: { x: -6, z: 0 }, to: { x: 8, z: 0 }, height: 6, levels: 2 },
+      { id: "h2so4-rack1", from: { x: -18, z: 0 }, to: { x: 24, z: 0 }, height: 7, levels: 2 },
     ],
     structures: [
-      { id: "h2so4-platform1", kind: "platform", position: [-2, 0, 2], size: [4, 5, 4] },
-      { id: "h2so4-stairway1", kind: "stairway", position: [1, 0, 5], rotation: Math.PI, height: 5 },
+      { id: "h2so4-platform1", kind: "platform", position: [-6, 0, 6], size: [5, 6, 5] },
+      { id: "h2so4-stairway1", kind: "stairway", position: [3, 0, 15], rotation: Math.PI, height: 6 },
     ],
     processOverview:
       "Molten sulfur is burned with dried air to form SO₂. The gas is passed over a vanadium catalyst in a multi-bed converter where SO₂ is oxidised to SO₃; heat is recovered between beds. The SO₃ is absorbed into concentrated sulfuric acid in a packed tower, forming oleum that is diluted to 98% product acid.",
@@ -222,27 +198,20 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
     keywords: ["ethanol", "alcohol", "fermentation", "bioethanol", "yeast", "beer"],
     difficulty: "Beginner",
     estimatedTime: 14,
-    theme: {
-      equipmentColor: "#4a6b3a",
-      structureColor: "#65a30d",
-      accent: "#10b981",
-      mood: "fermentation-green",
-      backdrop: "fermentation-tanks",
-    },
     equipment: [
       // Area A: Fermentation (north)
-      { id: "etoh-feed-tank", type: "tank", name: "Sugar Feed Tank", position: [-10, 0, 4], context: "Holds the sugar solution (molasses or glucose) diluted to fermentation strength." },
-      { id: "etoh-pump", type: "pump", name: "Feed Pump P-101", position: [-7, 0, 1], context: "Pumps the sugar feed into the fermenter." },
-      { id: "etoh-fermenter", type: "reactor", name: "Fermenter R-101", position: [-3, 0, 4], context: "Stirred batch fermenter. Yeast converts glucose to ethanol and CO₂ at ~32 °C." },
+      { id: "etoh-feed-tank", type: "tank", name: "Sugar Feed Tank", position: [-30, 0, 12], context: "Holds the sugar solution (molasses or glucose) diluted to fermentation strength." },
+      { id: "etoh-pump", type: "pump", name: "Feed Pump P-101", position: [-21, 0, 3], context: "Pumps the sugar feed into the fermenter." },
+      { id: "etoh-fermenter", type: "reactor", name: "Fermenter R-101", position: [-9, 0, 12], context: "Stirred batch fermenter. Yeast converts glucose to ethanol and CO₂ at ~32 °C." },
 
       // Area B: Distillation Train (center, on platform)
-      { id: "etoh-beer-column", type: "column", name: "Beer Column C-101", position: [2, 0, 0], context: "Strips ethanol from the fermentation broth." },
-      { id: "etoh-rectifier", type: "column", name: "Rectifier Column C-102", position: [6, 0, -3], context: "Concentrates the dilute ethanol up to the azeotropic ~95.6% limit." },
-      { id: "etoh-condenser", type: "cooler", name: "Rectifier Condenser E-101", position: [9, 0, 1], context: "Condenses the rectifier overhead using cooling water." },
-      { id: "etoh-cooler", type: "cooler", name: "Product Cooler E-102", position: [5, 0, -7], context: "Cools the finished ethanol to ambient temperature." },
+      { id: "etoh-beer-column", type: "column", name: "Beer Column C-101", position: [6, 0, 0], context: "Strips ethanol from the fermentation broth." },
+      { id: "etoh-rectifier", type: "column", name: "Rectifier Column C-102", position: [18, 0, -9], context: "Concentrates the dilute ethanol up to the azeotropic ~95.6% limit." },
+      { id: "etoh-condenser", type: "cooler", name: "Rectifier Condenser E-101", position: [27, 0, 3], context: "Condenses the rectifier overhead using cooling water." },
+      { id: "etoh-cooler", type: "cooler", name: "Product Cooler E-102", position: [15, 0, -21], context: "Cools the finished ethanol to ambient temperature." },
 
-      // Area C: Product Storage (bunded, flammable)
-      { id: "etoh-storage", type: "storageTank", name: "Ethanol Product Storage", position: [0, 0, -8], context: "Stores finished ethanol awaiting quality check and dispatch." },
+      // Area C: Product Storage (bunded, far south)
+      { id: "etoh-storage", type: "storageTank", name: "Ethanol Product Storage", position: [0, 0, -24], context: "Stores finished ethanol awaiting quality check and dispatch." },
     ],
     pipes: [
       { id: "etoh-p1", from: "etoh-feed-tank", to: "etoh-pump", stream: "feed", routing: "direct" },
@@ -254,16 +223,16 @@ export const PLANT_TEMPLATES: PlantTemplate[] = [
       { id: "etoh-p7", from: "etoh-cooler", to: "etoh-storage", stream: "product", routing: "rack", rackId: "etoh-rack1" },
     ],
     areas: [
-      { id: "etoh-area-a", name: "Fermentation", kind: "process", footprint: { x: -7, z: 4, width: 12, depth: 8 }, equipmentIds: ["etoh-feed-tank", "etoh-pump", "etoh-fermenter"] },
-      { id: "etoh-area-b", name: "Distillation Train", kind: "process", footprint: { x: 5, z: -1, width: 12, depth: 10 }, equipmentIds: ["etoh-beer-column", "etoh-rectifier", "etoh-condenser", "etoh-cooler"] },
-      { id: "etoh-area-c", name: "Product Storage", kind: "storage", footprint: { x: 0, z: -8, width: 10, depth: 6 }, bunded: true, equipmentIds: ["etoh-storage"] },
+      { id: "etoh-area-a", name: "Fermentation", kind: "process", footprint: { x: -21, z: 12, width: 30, depth: 18 }, equipmentIds: ["etoh-feed-tank", "etoh-pump", "etoh-fermenter"] },
+      { id: "etoh-area-b", name: "Distillation Train", kind: "process", footprint: { x: 15, z: -3, width: 30, depth: 24 }, equipmentIds: ["etoh-beer-column", "etoh-rectifier", "etoh-condenser", "etoh-cooler"] },
+      { id: "etoh-area-c", name: "Product Storage", kind: "storage", footprint: { x: 0, z: -24, width: 24, depth: 12 }, bunded: true, equipmentIds: ["etoh-storage"] },
     ],
     racks: [
-      { id: "etoh-rack1", from: { x: -3, z: 0 }, to: { x: 9, z: 0 }, height: 6, levels: 2 },
+      { id: "etoh-rack1", from: { x: -9, z: 0 }, to: { x: 27, z: 0 }, height: 7, levels: 2 },
     ],
     structures: [
-      { id: "etoh-platform1", kind: "platform", position: [4, 0, -1], size: [6, 4, 6] },
-      { id: "etoh-stairway1", kind: "stairway", position: [8, 0, 3], rotation: Math.PI, height: 4 },
+      { id: "etoh-platform1", kind: "platform", position: [12, 0, -3], size: [7, 5, 7] },
+      { id: "etoh-stairway1", kind: "stairway", position: [24, 0, 9], rotation: Math.PI, height: 5 },
     ],
     processOverview:
       "Sugar solution is pumped into a stirred fermenter where yeast anaerobically converts glucose to ethanol and CO₂. The resulting dilute 'beer' is fed to the beer column, which strips the ethanol overhead. The dilute ethanol is then concentrated in the rectifier column up to the azeotropic limit, condensed, cooled, and sent to storage.",

@@ -38,7 +38,7 @@ export function CameraController() {
   }, [camera, controls, invalidate]);
 
   const resetView = useCallback(() => {
-    camera.position.set(8, 12, 18);
+    camera.position.set(24, 32, 48);
     if (controls) {
       controls.target.set(0, 1, 0);
       controls.update();

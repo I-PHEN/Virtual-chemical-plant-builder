@@ -42,7 +42,7 @@ export function CameraRig({ equipment }: CameraRigProps) {
   const isAssistantSpeaking = useAppStore((s) => s.isAssistantSpeaking);
 
   const mode = useRef<"manual" | "flying" | "orbiting">("manual");
-  const targetPos = useRef(new THREE.Vector3(8, 12, 18));
+  const targetPos = useRef(new THREE.Vector3(24, 32, 48));
   const targetLook = useRef(new THREE.Vector3(0, 1, 0));
   const orbitCenter = useRef(new THREE.Vector3(0, 1, 0));
   const orbitAngle = useRef(0);
@@ -144,9 +144,9 @@ export function CameraRig({ equipment }: CameraRigProps) {
       if (!userInteracted.current && !focusId && tourStep === null) {
         idleTime.current += delta;
         const t = idleTime.current;
-        const driftX = 8 + Math.sin(t * 0.1) * 1.0;
-        const driftY = 12 + Math.sin(t * 0.15) * 0.3;
-        const driftZ = 18 + Math.cos(t * 0.1) * 1.0;
+        const driftX = 24 + Math.sin(t * 0.1) * 2;
+        const driftY = 32 + Math.sin(t * 0.15) * 0.5;
+        const driftZ = 48 + Math.cos(t * 0.1) * 2;
         camera.position.lerp(new THREE.Vector3(driftX, driftY, driftZ), 0.012);
         if (controlsRef.current) {
           controlsRef.current.target.lerp(new THREE.Vector3(0, 1, 0), 0.02);
@@ -207,8 +207,8 @@ export function CameraRig({ equipment }: CameraRigProps) {
       enableZoom
       enablePan
       enableRotate
-      minDistance={2}
-      maxDistance={80}
+      minDistance={3}
+      maxDistance={120}
       maxPolarAngle={Math.PI / 2.05}
       zoomSpeed={1.0}
       rotateSpeed={0.8}

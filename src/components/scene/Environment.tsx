@@ -150,8 +150,8 @@ export function Environment() {
         <meshBasicMaterial map={skyTexture} side={THREE.BackSide} fog={false} />
       </mesh>
 
-      {/* Soft fog for depth — mood-colored */}
-      <fog attach="fog" args={[moodColors.fog, 40, 120]} />
+      {/* Soft fog for depth — pushed further out for larger plants */}
+      <fog attach="fog" args={[moodColors.fog, 60, 180]} />
 
       {/* Lighting — mood-based sun + fill */}
       <ambientLight intensity={0.4} color="#a0a8b0" />
@@ -164,12 +164,12 @@ export function Environment() {
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
-        shadow-camera-left={-40}
-        shadow-camera-right={40}
-        shadow-camera-top={40}
-        shadow-camera-bottom={-40}
+        shadow-camera-left={-60}
+        shadow-camera-right={60}
+        shadow-camera-top={60}
+        shadow-camera-bottom={-60}
         shadow-camera-near={0.5}
-        shadow-camera-far={100}
+        shadow-camera-far={150}
         shadow-bias={-0.0005}
         shadow-normalBias={0.02}
       />

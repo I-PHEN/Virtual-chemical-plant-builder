@@ -70,7 +70,7 @@ export default function Home() {
   }, []);
 
   return (
-    <main className="relative h-screen w-screen overflow-hidden bg-[#08090c] text-white">
+    <main className="relative h-screen w-screen overflow-hidden bg-[#252525] text-white">
       {/* 3D scene fills the screen */}
       <div className="absolute inset-0">
         <PlantCanvas />
@@ -87,8 +87,8 @@ export default function Home() {
           {/* Tour auto-advance logic (invisible) */}
           <TourAutoAdvance />
 
-          {/* Ambient industrial audio */}
-          <AmbientAudio active={true} />
+          {/* Ambient industrial audio — only active in simulation */}
+          <AmbientAudio active={!!currentPlant && !isGenerating} />
 
           {/* top-left: header */}
           <div className="pointer-events-auto absolute left-0 top-0 z-10">
