@@ -89,44 +89,49 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
 
   return (
     <div className="absolute inset-0 z-30 flex h-screen bg-[#1f1f1f]">
-      {/* Collapsible sidebar */}
+      {/* Collapsible sidebar — ChatGPT style */}
       <aside
         className={cn(
           "flex flex-col border-r border-black/30 bg-[#1a1a1a] transition-all duration-200",
-          sidebarOpen ? "w-60" : "w-14"
+          sidebarOpen ? "w-60" : "w-12"
         )}
       >
-        {/* Toggle + New chat */}
-        <div className="flex items-center gap-1 p-2">
+        {/* Top: toggle button (hamburger) */}
+        <div className="p-2">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
             aria-label={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
-            className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+            title={sidebarOpen ? "Collapse sidebar" : "Expand sidebar"}
+            className="flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
           >
-            {sidebarOpen ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeft className="h-4 w-4" />}
+            {sidebarOpen ? <PanelLeftClose className="h-5 w-5" /> : <PanelLeft className="h-5 w-5" />}
           </button>
-          {sidebarOpen && (
+        </div>
+
+        {/* New chat button */}
+        <div className="px-2">
+          {sidebarOpen ? (
             <button
               onClick={() => { setMessages([]); setCommand(""); }}
-              className="flex flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-slate-300 transition-colors hover:bg-white/5"
+              className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[12px] text-slate-300 transition-colors hover:bg-white/5"
             >
-              <Plus className="h-3.5 w-3.5" />
-              New chat
+              <Plus className="h-4 w-4 flex-shrink-0" />
+              <span>New chat</span>
             </button>
-          )}
-          {!sidebarOpen && (
+          ) : (
             <button
               onClick={() => { setMessages([]); setCommand(""); }}
               aria-label="New chat"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+              title="New chat"
+              className="mx-auto flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="h-5 w-5" />
             </button>
           )}
         </div>
 
         {/* Conversation history */}
-        <div className="flex-1 overflow-y-auto px-2">
+        <div className="flex-1 overflow-y-auto px-2 pt-2">
           {sidebarOpen && conversations.length > 0 && (
             <div className="space-y-0.5">
               {conversations.map((conv) => (
@@ -134,8 +139,21 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
                   key={conv.id}
                   className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-[11px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
                 >
-                  <MessageSquare className="h-3 w-3 flex-shrink-0 text-slate-600" />
+                  <MessageSquare className="h-3.5 w-3.5 flex-shrink-0 text-slate-600" />
                   <span className="flex-1 truncate">{conv.title}</span>
+                </button>
+              ))}
+            </div>
+          )}
+          {!sidebarOpen && conversations.length > 0 && (
+            <div className="space-y-1">
+              {conversations.slice(0, 8).map((conv) => (
+                <button
+                  key={conv.id}
+                  title={conv.title}
+                  className="flex h-8 w-8 items-center justify-center rounded-md text-slate-500 transition-colors hover:bg-white/10 hover:text-slate-200"
+                >
+                  <MessageSquare className="h-3.5 w-3.5" />
                 </button>
               ))}
             </div>
@@ -149,16 +167,17 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
               onClick={() => setSettingsOpen(true)}
               className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-[11px] text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
             >
-              <Settings className="h-3.5 w-3.5" />
-              Settings
+              <Settings className="h-4 w-4 flex-shrink-0" />
+              <span>Settings</span>
             </button>
           ) : (
             <button
               onClick={() => setSettingsOpen(true)}
               aria-label="Settings"
-              className="flex h-8 w-8 items-center justify-center rounded-md text-slate-400 transition-colors hover:bg-white/5 hover:text-slate-200"
+              title="Settings"
+              className="mx-auto flex h-8 w-8 items-center justify-center rounded-md text-slate-300 transition-colors hover:bg-white/10 hover:text-white"
             >
-              <Settings className="h-4 w-4" />
+              <Settings className="h-5 w-5" />
             </button>
           )}
         </div>
