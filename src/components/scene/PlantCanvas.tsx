@@ -11,6 +11,7 @@ import { Environment, Ground, IndustrialBackdrop, Foundation } from "./Environme
 import { CameraController } from "./CameraController";
 import { PipeRackStructure, Bund, Platform, Stairway } from "./Structures";
 import { SafetyShower, FireExtinguisher, WarningSign, DrainageChannel, ServiceRoad } from "./SafetySystems";
+import { SteamPlume, DustParticles } from "./AtmosphericEffects";
 
 export function PlantCanvas() {
   const currentPlant = useAppStore((s) => s.currentPlant);
@@ -45,8 +46,17 @@ export function PlantCanvas() {
           far={20}
           resolution={512}
         />
+        {/* Atmospheric particles — dust in the air */}
+        <DustParticles />
         {currentPlant && (
           <>
+            {/* Steam plumes on heaters and reactors */}
+            {currentPlant.equipment.filter(e => e.type === "heater").map(e => (
+              <SteamPlume key={`steam-${e.id}`} position={[e.position[0], 5, e.position[2]]} scale={1.5} />
+            ))}
+            {currentPlant.equipment.filter(e => e.type === "reactor").map(e => (
+              <SteamPlume key={`steam-${e.id}`} position={[e.position[0], 4, e.position[2]]} scale={0.8} />
+            ))}
             {/* Concrete foundations under each equipment */}
             {currentPlant.equipment.map((eq) => (
               <Foundation key={`f-${eq.id}`} position={eq.position} size={getFoundationSize(eq.type)} />

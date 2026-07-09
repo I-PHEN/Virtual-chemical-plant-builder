@@ -153,14 +153,14 @@ export function Environment() {
       {/* Soft fog for depth — pushed further out for larger plants */}
       <fog attach="fog" args={[moodColors.fog, 60, 180]} />
 
-      {/* Lighting — mood-based sun + fill */}
-      <ambientLight intensity={0.4} color="#a0a8b0" />
-      <hemisphereLight args={[moodColors.sky[2], "#4a4540", 0.5]} />
-      {/* Strong directional sun — mood-colored */}
+      {/* Lighting — dramatic sun + fill, for real-world contrast */}
+      <ambientLight intensity={0.25} color="#a0a8b0" />
+      <hemisphereLight args={["#8a8a7a", "#3a3530", 0.35]} />
+      {/* Strong sun — harsh shadows for realism */}
       <directionalLight
-        position={[35, 25, -15]}
-        intensity={moodColors.sunIntensity}
-        color={moodColors.sunColor}
+        position={[40, 30, -10]}
+        intensity={2.5}
+        color="#ffd9a0"
         castShadow
         shadow-mapSize-width={2048}
         shadow-mapSize-height={2048}
@@ -170,71 +170,97 @@ export function Environment() {
         shadow-camera-bottom={-60}
         shadow-camera-near={0.5}
         shadow-camera-far={150}
-        shadow-bias={-0.0005}
-        shadow-normalBias={0.02}
+        shadow-bias={-0.0003}
+        shadow-normalBias={0.03}
       />
-      {/* Cool fill from opposite side */}
-      <directionalLight position={[-20, 12, 15]} intensity={0.5} color="#a0b0c0" />
+      {/* Cool sky fill */}
+      <directionalLight position={[-25, 15, 20]} intensity={0.6} color="#a0b8d0" />
     </>
   );
 }
 
 export function Ground() {
   const concreteTexture = useMemo(() => {
-    const size = 512;
+    const size = 1024;
     const canvas = document.createElement("canvas");
     canvas.width = size;
     canvas.height = size;
     const ctx = canvas.getContext("2d")!;
-    ctx.fillStyle = "#6b6960";
+    // Base concrete — radial gradient for depth
+    const baseGrad = ctx.createRadialGradient(size / 2, size / 2, 0, size / 2, size / 2, size / 1.2);
+    baseGrad.addColorStop(0, "#6b6960");
+    baseGrad.addColorStop(0.6, "#5a5852");
+    baseGrad.addColorStop(1, "#4a4842");
+    ctx.fillStyle = baseGrad;
     ctx.fillRect(0, 0, size, size);
+    // Noise
     const imageData = ctx.getImageData(0, 0, size, size);
     const data = imageData.data;
     for (let i = 0; i < data.length; i += 4) {
-      const noise = (Math.random() - 0.5) * 30;
+      const noise = (Math.random() - 0.5) * 35;
       data[i] = Math.max(0, Math.min(255, data[i] + noise));
       data[i + 1] = Math.max(0, Math.min(255, data[i + 1] + noise));
       data[i + 2] = Math.max(0, Math.min(255, data[i + 2] + noise));
     }
     ctx.putImageData(imageData, 0, 0);
-    ctx.strokeStyle = "rgba(40, 38, 33, 0.6)";
+    // Expansion joints
+    ctx.strokeStyle = "rgba(30, 28, 25, 0.7)";
     ctx.lineWidth = 3;
     for (let i = 0; i <= 4; i++) {
       const p = (i / 4) * size;
+      ctx.beginPath(); ctx.moveTo(p, 0); ctx.lineTo(p, size); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(0, p); ctx.lineTo(size, p); ctx.stroke();
+    }
+    // Cracks
+    ctx.strokeStyle = "rgba(20, 18, 15, 0.5)";
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
       ctx.beginPath();
-      ctx.moveTo(p, 0);
-      ctx.lineTo(p, size);
-      ctx.stroke();
-      ctx.beginPath();
-      ctx.moveTo(0, p);
-      ctx.lineTo(size, p);
+      let x = Math.random() * size;
+      let y = Math.random() * size;
+      ctx.moveTo(x, y);
+      for (let j = 0; j < 8; j++) {
+        x += (Math.random() - 0.5) * 60;
+        y += (Math.random() - 0.5) * 60;
+        ctx.lineTo(x, y);
+      }
       ctx.stroke();
     }
-    for (let i = 0; i < 8; i++) {
+    // Oil stains
+    for (let i = 0; i < 15; i++) {
       const x = Math.random() * size;
       const y = Math.random() * size;
-      const r = 10 + Math.random() * 30;
+      const r = 10 + Math.random() * 40;
       const stainGrad = ctx.createRadialGradient(x, y, 0, x, y, r);
-      stainGrad.addColorStop(0, "rgba(30, 28, 25, 0.3)");
-      stainGrad.addColorStop(1, "rgba(30, 28, 25, 0)");
+      stainGrad.addColorStop(0, "rgba(20, 18, 15, 0.35)");
+      stainGrad.addColorStop(1, "rgba(20, 18, 15, 0)");
       ctx.fillStyle = stainGrad;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+    }
+    // Rust runoff
+    for (let i = 0; i < 8; i++) {
+      const x = Math.random() * size;
+      const startY = Math.random() * size * 0.5;
+      const length = 80 + Math.random() * 200;
+      const grad = ctx.createLinearGradient(x, startY, x, startY + length);
+      grad.addColorStop(0, "rgba(139, 69, 19, 0.2)");
+      grad.addColorStop(1, "rgba(139, 69, 19, 0)");
+      ctx.fillStyle = grad;
+      ctx.fillRect(x - 3, startY, 6, length);
     }
     const tex = new THREE.CanvasTexture(canvas);
     tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
-    tex.repeat.set(20, 20);
+    tex.repeat.set(15, 15);
     tex.colorSpace = THREE.SRGBColorSpace;
     return tex;
   }, []);
 
   return (
     <group>
-      {/* Concrete ground */}
+      {/* Weathered concrete ground */}
       <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0]} receiveShadow>
         <planeGeometry args={[300, 300]} />
-        <meshStandardMaterial map={concreteTexture} roughness={0.9} metalness={0.05} />
+        <meshStandardMaterial map={concreteTexture} roughness={0.92} metalness={0.03} />
       </mesh>
     </group>
   );
