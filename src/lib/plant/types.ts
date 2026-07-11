@@ -14,7 +14,16 @@ export type EquipmentType =
   | "filter"
   | "motor"
   | "storageTank"
-  | "heater";
+  | "heater"
+  // Ammonia plant specific
+  | "reformer"
+  | "steamDrum"
+  | "boiler"
+  | "coolingTower"
+  | "flareStack"
+  | "waterTreatment"
+  | "desulfurizer"
+  | "evaporator";
 
 export type EquipmentCategory =
   | "processing"

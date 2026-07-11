@@ -629,6 +629,189 @@ export const EQUIPMENT_LIBRARY: Record<EquipmentType, EquipmentMetadata> = {
     ],
     color: "#64748b",
   },
+
+  // ─── Ammonia plant specific equipment ───
+
+  reformer: {
+    type: "reformer",
+    singularName: "Primary Reformer",
+    category: "processing",
+    tagline: "Catalyst tubes in a fired furnace — converts CH₄ to H₂ + CO",
+    purpose:
+      "The primary reformer is a large fired furnace containing hundreds of vertical catalyst-filled tubes. Natural gas and steam pass through the tubes at 700-800°C while burners heat the outside. The reaction converts methane to hydrogen and carbon monoxide (syngas). This is the signature equipment of an ammonia plant — a massive glowing box with a tall stack.",
+    workingPrinciple:
+      "Hundreds of vertical nickel-catalyst tubes are arranged inside a rectangular firebox. Burners at the top or sides combust fuel gas to heat the tubes to 700-800°C. The steam-methane reforming reaction (CH₄ + H₂O → CO + 3H₂) occurs inside the tubes. The flue gases exit through a tall stack. This is the most energy-intensive step in ammonia production.",
+    inputs: ["Desulfurized natural gas", "Steam"],
+    outputs: ["Syngas (H₂ + CO)", "Flue gas to stack"],
+    operatingConditions: "Tube temperature 700-900°C, pressure 30-40 bar. One of the hottest pieces of equipment in the plant.",
+    safetyConcerns: [
+      "Tube rupture releasing flammable gas into the firebox",
+      "Explosion from unburned fuel on light-off",
+      "Coking inside tubes from overheating",
+    ],
+    failureModes: [
+      "Tube creep and rupture at hot spots",
+      "Catalyst deactivation from sulfur poisoning",
+      "Burner tip fouling",
+    ],
+    equations: [
+      { name: "Steam-methane reforming", formula: "CH₄ + H₂O → CO + 3H₂", description: "Endothermic reaction — absorbs heat. ΔH = +206 kJ/mol." },
+      { name: "Heat duty", formula: "Q = ṁ cp (Tout − Tin)", description: "Heat absorbed by the process gas." },
+    ],
+    interviewQuestions: [
+      "What is steam-methane reforming and why is it endothermic?",
+      "Why must natural gas be desulfurized before the reformer?",
+      "What causes tube failure in a primary reformer?",
+    ],
+    color: "#ea580c", // ORANGE — it's a furnace, hot
+  },
+
+  steamDrum: {
+    type: "steamDrum",
+    singularName: "Steam Drum",
+    category: "utility",
+    tagline: "Separates steam from water in a boiler system",
+    purpose:
+      "A steam drum is a large horizontal vessel mounted above the waste heat boiler. It separates steam from the water-steam mixture returning from the boiler tubes, stores water for the boiler, and provides a reservoir for the steam system.",
+    workingPrinciple:
+      "The water-steam mixture from the boiler tubes enters the drum. Internally, demister pads and baffles separate the steam (which exits the top) from the water (which returns to the boiler via downcomers). Level controls maintain the water level.",
+    inputs: ["Water-steam mixture from boiler tubes"],
+    outputs: ["Saturated steam (top)", "Water to boiler (bottom)"],
+    operatingConditions: "Pressure 100-150 bar, temperature 300-350°C. Level carefully controlled.",
+    safetyConcerns: ["Low water level causing boiler tube failure", "High level carrying water into steam system"],
+    failureModes: ["Level instrument failure", "Corrosion of internal baffles"],
+    equations: [
+      { name: "Steam quality", formula: "x = m_steam / m_total", description: "Fraction of the mixture that is steam." },
+    ],
+    interviewQuestions: ["What is the purpose of a steam drum?", "What happens if the water level is too low?"],
+    color: "#64748b",
+  },
+
+  boiler: {
+    type: "boiler",
+    singularName: "Industrial Boiler",
+    category: "utility",
+    tagline: "Generates steam by burning fuel",
+    purpose:
+      "An industrial boiler generates steam by burning fuel (natural gas, oil, or coal) to heat water. The steam is used for process heating, power generation, and driving turbines throughout the plant.",
+    workingPrinciple:
+      "Water flows through tubes arranged in a furnace. Burners combust fuel, heating the tubes and boiling the water inside. The water-steam mixture rises to the steam drum for separation. Large boilers have economizers, superheaters, and air preheaters for efficiency.",
+    inputs: ["Fuel gas or oil", "Feedwater", "Combustion air"],
+    outputs: ["Steam", "Flue gas to stack"],
+    operatingConditions: "Steam pressure 10-150 bar depending on application. Very high fuel consumption.",
+    safetyConcerns: ["Tube rupture", "Furnace explosion on light-off", "Low water level"],
+    failureModes: ["Tube scaling and rupture", "Refractory damage", "Burner problems"],
+    equations: [
+      { name: "Boiler efficiency", formula: "η = Q_steam / (m_fuel × LHV)", description: "Ratio of steam heat output to fuel energy input." },
+    ],
+    interviewQuestions: ["How does a boiler generate steam?", "What safety interlocks must a boiler have?"],
+    color: "#ea580c",
+  },
+
+  coolingTower: {
+    type: "coolingTower",
+    singularName: "Cooling Tower",
+    category: "utility",
+    tagline: "Cools water by evaporation — the hyperbolic giant",
+    purpose:
+      "A cooling tower cools the warm water returning from process heat exchangers by evaporating a small portion of it. The cooled water is recycled back to the process. Cooling towers are among the largest structures in any chemical plant.",
+    workingPrinciple:
+      "Warm water is sprayed at the top of the tower and falls through packing (fill). Air is drawn upward (either by natural draft in hyperbolic towers or by fans in mechanical draft towers). Evaporation of a small fraction of the water cools the rest. The cooled water collects in a basin at the bottom.",
+    inputs: ["Warm cooling water from process"],
+    outputs: ["Cooled water to process", "Water vapor to atmosphere"],
+    operatingConditions: "Approach temperature 5-10°C to wet bulb. Drift eliminators reduce water loss.",
+    safetyConcerns: ["Legionella bacteria in the water", "Structural failure of the tower", "Ice formation in winter"],
+    failureModes: ["Fill degradation", "Fan failure (mechanical draft)", "Scale buildup"],
+    equations: [
+      { name: "Cooling range", formula: "ΔT = T_hot − T_cold", description: "Temperature drop of the water through the tower." },
+    ],
+    interviewQuestions: ["How does a cooling tower work?", "What is the difference between natural draft and mechanical draft?"],
+    color: "#06b6d4",
+  },
+
+  flareStack: {
+    type: "flareStack",
+    singularName: "Flare Stack",
+    category: "utility",
+    tagline: "Burns excess gases safely — the plant's safety valve",
+    purpose:
+      "A flare stack is a tall vertical pipe with a burner at the top. It safely burns excess or waste gases that cannot be processed or stored, preventing dangerous pressure buildup and environmental release of flammable gases.",
+    workingPrinciple:
+      "Waste gases are routed to the base of the stack and flow up to the flare tip. A pilot flame at the tip ignites the gases. Steam or air is injected to improve combustion and reduce smoke. The stack is tall (30-100m) to ensure the flame and combustion products are dispersed safely.",
+    inputs: ["Waste/excess gases from the plant"],
+    outputs: ["Combustion products to atmosphere", "Heat and light"],
+    operatingConditions: "Continuous pilot flame. Flow rate varies with plant upsets.",
+    safetyConcerns: ["Flameout causing unburned gas release", "Radiation heat at ground level", "Air-fuel explosion"],
+    failureModes: ["Pilot flame failure", "Tip erosion", "Liquid carryover causing rain of fire"],
+    equations: [
+      { name: "Heat radiation", formula: "Q = m × LHV × η_combustion", description: "Heat released by flaring." },
+    ],
+    interviewQuestions: ["What is the purpose of a flare stack?", "What happens if the pilot flame goes out?"],
+    color: "#dc2626",
+  },
+
+  waterTreatment: {
+    type: "waterTreatment",
+    singularName: "Water Treatment Unit",
+    category: "utility",
+    tagline: "Purifies water for boiler and process use",
+    purpose:
+      "A water treatment unit removes minerals, dissolved gases, and impurities from raw water to produce the high-purity water needed for boiler feedwater and process use. Without it, boilers and heat exchangers would scale and corrode rapidly.",
+    workingPrinciple:
+      "Raw water passes through a series of treatment steps: filtration (removes suspended solids), ion exchange (removes dissolved minerals — demineralization), and deaeration (removes dissolved oxygen). The result is high-purity water suitable for boiler feed.",
+    inputs: ["Raw water from river or municipal supply"],
+    outputs: ["Demineralized water for boiler and process"],
+    operatingConditions: "Ambient temperature and pressure. Monitored for conductivity and silica.",
+    safetyConcerns: ["Chemical handling (acids, caustic for regeneration)", "Resin exhaustion"],
+    failureModes: ["Ion exchange resin exhaustion", "Filter blinding", "Valve failure"],
+    equations: [
+      { name: "Conductivity", formula: "κ = 1/ρ", description: "Inverse of resistivity — measures water purity." },
+    ],
+    interviewQuestions: ["Why must boiler feedwater be demineralized?", "What is ion exchange?"],
+    color: "#0d9488",
+  },
+
+  desulfurizer: {
+    type: "desulfurizer",
+    singularName: "Desulfurizer",
+    category: "processing",
+    tagline: "Removes sulfur from natural gas feed",
+    purpose:
+      "A desulfurizer removes sulfur compounds (H₂S, mercaptans) from natural gas before it enters the reformer. Sulfur poisons the nickel catalyst in the reformer tubes, so it must be reduced to <0.1 ppm.",
+    workingPrinciple:
+      "Natural gas passes through a bed of zinc oxide (ZnO) catalyst, which reacts with H₂S to form zinc sulfide (ZnS). The reaction is irreversible. Multiple beds are used in series. If organic sulfur is present, a hydrogenation step (CoMo catalyst) first converts it to H₂S.",
+    inputs: ["Natural gas with sulfur compounds"],
+    outputs: ["Desulfurized natural gas (<0.1 ppm S)"],
+    operatingConditions: "Temperature 350-400°C, pressure 30-40 bar.",
+    safetyConcerns: ["Catalyst bed overheating", "H₂S exposure during catalyst change-out"],
+    failureModes: ["Catalyst saturation (sulfur breakthrough)", "Channeling through the bed"],
+    equations: [
+      { name: "Desulfurization reaction", formula: "ZnO + H₂S → ZnS + H₂O", description: "Irreversible absorption of H₂S by zinc oxide." },
+    ],
+    interviewQuestions: ["Why must natural gas be desulfurized before reforming?", "What catalyst is used for desulfurization?"],
+    color: "#a16207",
+  },
+
+  evaporator: {
+    type: "evaporator",
+    singularName: "Refrigeration Evaporator",
+    category: "processing",
+    tagline: "Absorbs heat by evaporating refrigerant",
+    purpose:
+      "In the ammonia refrigeration loop, the evaporator is where liquid ammonia is vaporized by absorbing heat from the process stream (usually the ammonia synthesis loop). This cools the process to condense ammonia product.",
+    workingPrinciple:
+      "Liquid ammonia (refrigerant) enters the evaporator at low pressure. It absorbs heat from the warmer process stream flowing on the other side of the heat exchanger surface, causing the liquid ammonia to boil/vaporize. The cold ammonia vapor is then compressed by the refrigeration compressor.",
+    inputs: ["Liquid ammonia refrigerant", "Warm process stream to be cooled"],
+    outputs: ["Ammonia vapor to compressor", "Cooled process stream"],
+    operatingConditions: "Temperature -10 to -33°C depending on ammonia pressure level.",
+    safetyConcerns: ["Tube leak mixing refrigerant with process", "Freezing of process side"],
+    failureModes: ["Tube fouling", "Refrigerant leakage", "Ice formation"],
+    equations: [
+      { name: "Refrigeration duty", formula: "Q = ṁ_ref × (h_vapor − h_liquid)", description: "Heat absorbed by evaporating refrigerant." },
+    ],
+    interviewQuestions: ["What is the role of the evaporator in a refrigeration loop?", "Why does ammonia make a good refrigerant?"],
+    color: "#06b6d4",
+  },
 };
 
 export const ALL_EQUIPMENT_TYPES = Object.keys(EQUIPMENT_LIBRARY) as EquipmentType[];
