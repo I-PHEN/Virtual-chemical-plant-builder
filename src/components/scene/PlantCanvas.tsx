@@ -3,6 +3,8 @@
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import { PerspectiveCamera, Environment as DreiEnvironment, ContactShadows } from "@react-three/drei";
+import { EffectComposer, N8AO, Bloom, Vignette, SMAA, ToneMapping } from "@react-three/postprocessing";
+import { ToneMappingMode } from "postprocessing";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { Equipment } from "./Equipment";
 import { PipeNetwork } from "./PipeNetwork";
@@ -24,9 +26,9 @@ export function PlantCanvas() {
       className="absolute inset-0"
       onPointerMissed={() => selectEquipment(null)}
       gl={{
-        antialias: true,
+        antialias: false, // SMAA post handles AA
         powerPreference: "high-performance",
-        toneMapping: 2,
+        toneMapping: 2, // ACESFilmicToneMapping
         toneMappingExposure: 1.1,
       }}
     >
@@ -143,6 +145,15 @@ export function PlantCanvas() {
       </Suspense>
 
       <PerspectiveCamera makeDefault position={[24, 32, 48]} fov={50} near={0.1} far={400} />
+
+      {/* Post-processing stack — the biggest visual jump */}
+      <EffectComposer multisampling={0}>
+        <N8AO halfRes aoRadius={5} intensity={2.5} distanceFalloff={0.5} />
+        <Bloom mipmapBlur intensity={0.4} luminanceThreshold={1.0} radius={0.6} />
+        <Vignette eskil={false} offset={0.25} darkness={0.7} />
+        <SMAA />
+        <ToneMapping mode={ToneMappingMode.AGX_FILMIC} />
+      </EffectComposer>
     </Canvas>
   );
 }
