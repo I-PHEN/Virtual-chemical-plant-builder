@@ -167,6 +167,35 @@ export function usePodcastTour() {
     setTimeout(() => play(), 300);
   }, [pause, play]);
 
+  // Check for pre-generated tour (from build phase) on mount
+  useEffect(() => {
+    const checkPreGenerated = () => {
+      const pre = (window as any).__preGeneratedTour;
+      if (pre?.ready) {
+        setSegments(pre.segments);
+        setAudioBuffers(pre.audioBuffers);
+        audioContextRef.current = pre.audioContext;
+        setTourReady(true);
+        setCurrentSegment(0);
+        return true;
+      }
+      return false;
+    };
+
+    // Check immediately
+    if (!checkPreGenerated()) {
+      // Poll every 2 seconds for up to 60 seconds (while build is generating)
+      let attempts = 0;
+      const interval = setInterval(() => {
+        attempts++;
+        if (checkPreGenerated() || attempts > 30) {
+          clearInterval(interval);
+        }
+      }, 2000);
+      return () => clearInterval(interval);
+    }
+  }, [currentPlant]);
+
   // Cleanup on unmount
   useEffect(() => {
     return () => {

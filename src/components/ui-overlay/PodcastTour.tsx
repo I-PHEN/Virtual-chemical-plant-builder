@@ -24,7 +24,24 @@ export function PodcastTour() {
 
   if (!currentPlant || dismissed) return null;
 
-  // While generating the tour
+  // While generating the tour (either via build phase or manual)
+  if (isGenerating || (!tourReady && !isGenerating && segments.length === 0)) {
+    // Check if tour is being generated in the background (from build phase)
+    const preGen = typeof window !== "undefined" && (window as any).__preGeneratedTour;
+    const isBuilding = !preGen?.ready && !tourReady;
+
+    if (isBuilding) {
+      return (
+        <div className="pointer-events-auto absolute left-1/2 top-16 z-20 -translate-x-1/2">
+          <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/20 bg-slate-950/80 px-3 py-2 shadow-2xl backdrop-blur">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400" />
+            <span className="text-[11px] text-slate-400">Preparing tour audio…</span>
+          </div>
+        </div>
+      );
+    }
+  }
+
   if (isGenerating) {
     return (
       <div className="pointer-events-auto absolute left-1/2 top-16 z-20 -translate-x-1/2">

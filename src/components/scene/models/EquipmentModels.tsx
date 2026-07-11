@@ -172,15 +172,15 @@ function TrayRings({ count, radius, height, startY, material }: { count: number;
 /** CSTR / Stirred Tank Reactor — squat vessel (height ≈ 1.3× diameter) */
 function StirredReactor({ color, emphasized, dimmed }: ModelProps) {
   const m = useMaterials(color, emphasized, dimmed);
-  const diameter = 1.8;
+  const diameter = 6; // real CSTR: 4-8m diameter
   const height = diameter * 1.3; // squat
   const r = diameter / 2;
 
   return (
     <group>
       {/* Support skirt */}
-      <mesh position={[0, 0.2, 0]} castShadow material={m.darkSteel}>
-        <cylinderGeometry args={[r * 0.75, r * 0.85, 0.4, 24]} />
+      <mesh position={[0, 1, 0]} castShadow material={m.darkSteel}>
+        <cylinderGeometry args={[r * 0.75, r * 0.85, 2, 24]} />
       </mesh>
 
       {/* Vessel shell */}
@@ -238,15 +238,15 @@ function StirredReactor({ color, emphasized, dimmed }: ModelProps) {
 /** PFR / Fixed-bed Reactor — tall pressure vessel with catalyst bed */
 function FixedBedReactor({ color, emphasized, dimmed }: ModelProps) {
   const m = useMaterials(color, emphasized, dimmed);
-  const diameter = 1.4;
-  const height = diameter * 3.5; // taller than CSTR, but not as slender as column
+  const diameter = 4; // real ammonia converter: 3-5m diameter
+  const height = diameter * 4.5; // 18m tall — real ammonia converter is 15-22m
   const r = diameter / 2;
 
   return (
     <group>
       {/* Support skirt */}
-      <mesh position={[0, 0.2, 0]} castShadow material={m.darkSteel}>
-        <cylinderGeometry args={[r * 0.8, r * 0.9, 0.4, 24]} />
+      <mesh position={[0, 1, 0]} castShadow material={m.darkSteel}>
+        <cylinderGeometry args={[r * 0.8, r * 0.9, 2, 24]} />
       </mesh>
 
       {/* Tall pressure vessel */}
@@ -298,15 +298,15 @@ function FixedBedReactor({ color, emphasized, dimmed }: ModelProps) {
 /** Distillation Column — tall slender vessel (height 12× diameter) */
 function DistillationColumn({ color, emphasized, dimmed }: ModelProps) {
   const m = useMaterials(color, emphasized, dimmed);
-  const diameter = 1.0;
-  const height = diameter * 12; // very tall and slender
+  const diameter = 3.5; // real distillation column: 2.5-5m diameter
+  const height = diameter * 14; // 49m tall — real columns are 40-60m
   const r = diameter / 2;
 
   return (
     <group>
       {/* Support skirt */}
-      <mesh position={[0, 0.25, 0]} castShadow material={m.darkSteel}>
-        <cylinderGeometry args={[r * 0.85, r * 0.95, 0.5, 24]} />
+      <mesh position={[0, 1.5, 0]} castShadow material={m.darkSteel}>
+        <cylinderGeometry args={[r * 0.85, r * 0.95, 3, 24]} />
       </mesh>
 
       {/* Tall slender shell */}
@@ -369,8 +369,8 @@ function DistillationColumn({ color, emphasized, dimmed }: ModelProps) {
 /** Shell-and-tube heat exchanger — horizontal, smaller than reactor */
 function ShellTubeHeatExchanger({ color, emphasized, dimmed }: ModelProps) {
   const m = useMaterials(color, emphasized, dimmed);
-  const shellDiameter = 0.7;
-  const length = shellDiameter * 5; // length 5× diameter
+  const shellDiameter = 1.5; // real shell-and-tube HX: 1-2m diameter
+  const length = shellDiameter * 5; // 7.5m long
   const r = shellDiameter / 2;
 
   return (
@@ -434,8 +434,8 @@ function CentrifugalPump({ color, emphasized, dimmed }: ModelProps) {
   return (
     <group>
       {/* Baseplate */}
-      <mesh position={[0, 0.04, 0]} castShadow receiveShadow material={m.darkSteel}>
-        <boxGeometry args={[2.0, 0.08, 1.0]} />
+      <mesh position={[0, 0.1, 0]} castShadow receiveShadow material={m.darkSteel}>
+        <boxGeometry args={[4.0, 0.15, 2.0]} />
       </mesh>
 
       {/* Volute casing — snail-shell shape */}
@@ -496,8 +496,8 @@ function CentrifugalCompressor({ color, emphasized, dimmed }: ModelProps) {
   return (
     <group>
       {/* Baseplate */}
-      <mesh position={[0, 0.04, 0]} castShadow receiveShadow material={m.darkSteel}>
-        <boxGeometry args={[3.2, 0.08, 1.3]} />
+      <mesh position={[0, 0.1, 0]} castShadow receiveShadow material={m.darkSteel}>
+        <boxGeometry args={[6.0, 0.15, 2.5]} />
       </mesh>
 
       {/* 3-stage compressor body — horizontal barrel */}
@@ -552,15 +552,15 @@ function CentrifugalCompressor({ color, emphasized, dimmed }: ModelProps) {
 /** Tank — large diameter, short vessel (diameter > height) */
 function StorageTankModel({ color, emphasized, dimmed, large }: ModelProps & { large?: boolean }) {
   const m = useMaterials(color, emphasized, dimmed);
-  const diameter = large ? 2.5 : 1.7;
+  const diameter = large ? 18 : 10; // real storage tank: 10-25m diameter
   const height = diameter * 0.9; // diameter exceeds height
   const r = diameter / 2;
 
   return (
     <group>
       {/* Skirt */}
-      <mesh position={[0, 0.15, 0]} material={m.darkSteel}>
-        <cylinderGeometry args={[r * 0.7, r * 0.8, 0.3, 24]} />
+      <mesh position={[0, 0.5, 0]} material={m.darkSteel}>
+        <cylinderGeometry args={[r * 0.7, r * 0.8, 1, 24]} />
       </mesh>
 
       {/* Body — wide and short */}
@@ -617,8 +617,8 @@ function StorageTankModel({ color, emphasized, dimmed, large }: ModelProps & { l
 /** Separator — vertical 2-phase vessel, distinct from tank/reactor */
 function VesselSeparator({ color, emphasized, dimmed }: ModelProps) {
   const m = useMaterials(color, emphasized, dimmed);
-  const diameter = 1.0;
-  const height = diameter * 3.5; // taller than tank, shorter than column
+  const diameter = 3; // real separator: 2-4m diameter
+  const height = diameter * 3.5; // 10.5m tall
   const r = diameter / 2;
 
   return (
@@ -629,11 +629,11 @@ function VesselSeparator({ color, emphasized, dimmed }: ModelProps) {
         return (
           <mesh
             key={i}
-            position={[Math.cos(a) * r * 0.7, 0.3, Math.sin(a) * r * 0.7]}
+            position={[Math.cos(a) * r * 0.7, 1, Math.sin(a) * r * 0.7]}
             rotation={[Math.sin(a) * 0.2, 0, -Math.cos(a) * 0.2]}
             material={m.darkSteel}
           >
-            <cylinderGeometry args={[0.04, 0.04, 0.7, 8]} />
+            <cylinderGeometry args={[0.12, 0.12, 2, 8]} />
           </mesh>
         );
       })}
@@ -686,64 +686,64 @@ function FiredHeater({ color, emphasized, dimmed }: ModelProps) {
   const m = useMaterials(color, emphasized, dimmed);
   return (
     <group>
-      {/* Firebox (rectangular) */}
-      <mesh position={[0, 1.2, 0]} castShadow receiveShadow material={m.carbonSteel}>
-        <boxGeometry args={[1.6, 2.2, 1.4]} />
+      {/* Firebox (rectangular) — real reformer is 5-10m tall */}
+      <mesh position={[0, 4, 0]} castShadow receiveShadow material={m.carbonSteel}>
+        <boxGeometry args={[5, 8, 4]} />
       </mesh>
 
       {/* Refractory inner glow */}
-      <mesh position={[0, 1.0, 0.72]} material={m.glass}>
-        <boxGeometry args={[1.2, 1.6, 0.02]} />
+      <mesh position={[0, 3.5, 2.02]} material={m.glass}>
+        <boxGeometry args={[3.5, 5, 0.02]} />
       </mesh>
 
-      {/* Burners (3) */}
-      {[-0.4, 0, 0.4].map((x, i) => (
+      {/* Burners (5) */}
+      {[-1.5, -0.75, 0, 0.75, 1.5].map((x, i) => (
         <group key={i}>
-          <mesh position={[x, 0.35, 0.72]} material={m.darkSteel}>
-            <cylinderGeometry args={[0.14, 0.18, 0.18, 16]} rotation={[Math.PI / 2, 0, 0]} />
+          <mesh position={[x, 1.2, 2.02]} material={m.darkSteel}>
+            <cylinderGeometry args={[0.4, 0.5, 0.5, 16]} rotation={[Math.PI / 2, 0, 0]} />
           </mesh>
-          <mesh position={[x, 0.35, 0.84]} material={m.hazard}>
-            <cylinderGeometry args={[0.11, 0.11, 0.03, 16]} rotation={[Math.PI / 2, 0, 0]} />
+          <mesh position={[x, 1.2, 2.3]} material={m.hazard}>
+            <cylinderGeometry args={[0.3, 0.3, 0.08, 16]} rotation={[Math.PI / 2, 0, 0]} />
           </mesh>
         </group>
       ))}
 
       {/* Tube coils on walls (radiant section) */}
-      {Array.from({ length: 6 }).map((_, i) => (
-        <mesh key={`r${i}`} position={[0.8, 0.6 + i * 0.3, 0]} material={m.stainless}>
-          <boxGeometry args={[0.04, 0.2, 1.0]} />
+      {Array.from({ length: 10 }).map((_, i) => (
+        <mesh key={`r${i}`} position={[2.4, 2 + i * 0.6, 0]} material={m.stainless}>
+          <boxGeometry args={[0.1, 0.4, 3.0]} />
         </mesh>
       ))}
-      {Array.from({ length: 6 }).map((_, i) => (
-        <mesh key={`l${i}`} position={[-0.8, 0.6 + i * 0.3, 0]} material={m.stainless}>
-          <boxGeometry args={[0.04, 0.2, 1.0]} />
+      {Array.from({ length: 10 }).map((_, i) => (
+        <mesh key={`l${i}`} position={[-2.4, 2 + i * 0.6, 0]} material={m.stainless}>
+          <boxGeometry args={[0.1, 0.4, 3.0]} />
         </mesh>
       ))}
 
       {/* Convection section (smaller box on top) */}
-      <mesh position={[0, 2.6, 0]} material={m.darkSteel}>
-        <boxGeometry args={[1.4, 0.5, 1.2]} />
+      <mesh position={[0, 8.5, 0]} material={m.darkSteel}>
+        <boxGeometry args={[4, 1.5, 3.5]} />
       </mesh>
-      {Array.from({ length: 5 }).map((_, i) => (
-        <mesh key={i} position={[-0.5 + i * 0.25, 2.6, 0]} material={m.stainless}>
-          <boxGeometry args={[0.04, 0.4, 1.0]} />
+      {Array.from({ length: 8 }).map((_, i) => (
+        <mesh key={i} position={[-1.5 + i * 0.4, 8.5, 0]} material={m.stainless}>
+          <boxGeometry args={[0.08, 1.2, 2.8]} />
         </mesh>
       ))}
 
-      {/* Tall stack */}
-      <mesh position={[0, 3.8, 0]} castShadow material={m.darkSteel}>
-        <cylinderGeometry args={[0.32, 0.38, 1.8, 20]} />
+      {/* Tall stack — real reformer stacks are 20-30m */}
+      <mesh position={[0, 18, 0]} castShadow material={m.darkSteel}>
+        <cylinderGeometry args={[0.8, 1.0, 15, 20]} />
       </mesh>
-      <mesh position={[0, 3.0, 0]} material={m.stainless}>
-        <cylinderGeometry args={[0.4, 0.4, 0.08, 20]} />
+      <mesh position={[0, 10.5, 0]} material={m.stainless}>
+        <cylinderGeometry args={[1.0, 1.0, 0.15, 20]} />
       </mesh>
 
       {/* Process inlet/outlet */}
-      <mesh position={[-0.9, 0.5, 0]} rotation={[0, 0, Math.PI / 2]} material={m.stainless}>
-        <cylinderGeometry args={[0.1, 0.1, 0.25, 12]} />
+      <mesh position={[-2.6, 2, 0]} rotation={[0, 0, Math.PI / 2]} material={m.stainless}>
+        <cylinderGeometry args={[0.3, 0.3, 0.6, 12]} />
       </mesh>
-      <mesh position={[0.9, 2.0, 0]} rotation={[0, 0, Math.PI / 2]} material={m.stainless}>
-        <cylinderGeometry args={[0.1, 0.1, 0.25, 12]} />
+      <mesh position={[2.6, 5, 0]} rotation={[0, 0, Math.PI / 2]} material={m.stainless}>
+        <cylinderGeometry args={[0.3, 0.3, 0.6, 12]} />
       </mesh>
     </group>
   );
@@ -752,8 +752,8 @@ function FiredHeater({ color, emphasized, dimmed }: ModelProps) {
 /** Cooler — finned-tube radiator, very different from shell-and-tube HX */
 function AirCooler({ color, emphasized, dimmed }: ModelProps) {
   const m = useMaterials(color, emphasized, dimmed);
-  const len = 1.8;
-  const r = 0.3;
+  const len = 6; // real air cooler: 5-8m long
+  const r = 0.8; // 1.6m diameter
 
   return (
     <group rotation={[0, 0, Math.PI / 2]} position={[0, 0.9, 0]}>
