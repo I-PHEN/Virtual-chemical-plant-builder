@@ -266,65 +266,14 @@ export function Ground() {
   );
 }
 
-/** Distant industrial backdrop — consistent across all plants */
+/**
+ * Distant industrial backdrop — now empty since we use real GLB models
+ * (GLBBuildings + GLBChimneys) for the backdrop. The old procedural
+ * boxes/silos/stacks have been removed because they looked like plant
+ * equipment and confused the viewer.
+ */
 export function IndustrialBackdrop() {
-  const structureColor = "#3a3d42";
-
-  return (
-    <group>
-      {/* Common distant buildings */}
-      {[
-        { x: -60, z: -50, w: 20, h: 12, d: 15 },
-        { x: -35, z: -65, w: 15, h: 18, d: 12 },
-        { x: 40, z: -60, w: 25, h: 10, d: 18 },
-        { x: 65, z: -45, w: 18, h: 15, d: 14 },
-        { x: -70, z: 30, w: 16, h: 14, d: 20 },
-        { x: 70, z: 40, w: 22, h: 12, d: 16 },
-      ].map((b, i) => (
-        <mesh key={i} position={[b.x, b.h / 2, b.z]} castShadow>
-          <boxGeometry args={[b.w, b.h, b.d]} />
-          <meshStandardMaterial color={structureColor} roughness={0.85} metalness={0.1} />
-        </mesh>
-      ))}
-
-      {/* Consistent distant backdrop — silos, buildings, stacks */}
-      {/* Distant silos */}
-      {[
-        { x: -50, z: -55, r: 4, h: 20 },
-        { x: -44, z: -52, r: 3.5, h: 18 },
-        { x: 50, z: -55, r: 4, h: 22 },
-        { x: 56, z: -50, r: 3, h: 16 },
-      ].map((s, i) => (
-        <group key={i}>
-          <mesh position={[s.x, s.h / 2, s.z]} castShadow>
-            <cylinderGeometry args={[s.r, s.r, s.h, 20]} />
-            <meshStandardMaterial color="#9ca3af" roughness={0.6} metalness={0.4} />
-          </mesh>
-          <mesh position={[s.x, s.h + s.r * 0.3, s.z]}>
-            <sphereGeometry args={[s.r, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
-            <meshStandardMaterial color="#b0b6bd" roughness={0.5} metalness={0.4} />
-          </mesh>
-        </group>
-      ))}
-      {/* Distant stacks */}
-      {[
-        { x: -25, z: -70, h: 25 },
-        { x: -20, z: -72, h: 22 },
-        { x: 25, z: -68, h: 28 },
-      ].map((s, i) => (
-        <group key={i}>
-          <mesh position={[s.x, s.h / 2, s.z]} castShadow>
-            <cylinderGeometry args={[1.2, 1.5, s.h, 16]} />
-            <meshStandardMaterial color="#6b7280" roughness={0.7} metalness={0.3} />
-          </mesh>
-          <mesh position={[s.x, s.h, s.z]}>
-            <cylinderGeometry args={[1.5, 1.5, 0.5, 16]} />
-            <meshStandardMaterial color="#4b5563" roughness={0.7} />
-          </mesh>
-        </group>
-      ))}
-    </group>
-  );
+  return null;
 }
 
 /**
