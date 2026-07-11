@@ -193,20 +193,15 @@ export function usePlantBuilder() {
           return;
         }
 
-        await new Promise((r) => setTimeout(r, 400));
+        await new Promise((r) => setTimeout(r, 600));
 
+        // Load the plant (but keep isGenerating true — the chat will clear it
+        // after narration is done)
         setPlant(template, data.intro);
-        addMessage({
-          id: uid(),
-          role: "assistant",
-          content: data.intro,
-          timestamp: Date.now(),
-        });
-        setCurrentCaption(data.intro);
+
+        // Speak the intro via the voice system
         const speak = (window as any).__plantSpeak as ((t: string) => void) | undefined;
         if (speak) speak(data.intro);
-        // Tour narration is now generated in the chat build phase (WelcomeScreen)
-        // not here in the simulation.
       } catch (err) {
         console.error("[build-plant] failed", err);
         setGenerating(false);

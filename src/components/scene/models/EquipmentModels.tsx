@@ -1,24 +1,27 @@
 "use client";
 
-import { useMemo, useRef } from "react";
-import { useFrame } from "@react-three/fiber";
+import { useMemo } from "react";
 import * as THREE from "three";
 import type { EquipmentType } from "@/lib/plant/types";
 
 /**
  * Parametric equipment component library.
  *
- * Every unit operation is its own component with real-world proportions
- * encoded as parameters (diameter, heightRatio). A CSTR is squat
- * (height ≈ 1–1.5× diameter), a distillation column is tall and slender
- * (height 10–20× diameter), a heat exchanger is horizontal and smaller.
- *
- * Remove the labels and an engineering student should tell them apart
- * by silhouette alone.
- *
- * Materials use distinct PBR families: carbon steel, stainless, insulation
- * cladding, painted structural steel. All use MeshStandardMaterial — never
- * MeshBasicMaterial.
+ * Each equipment type has a distinct color from the equipmentLibrary:
+ * - Pump: BLUE (#2563eb)
+ * - Tank: TEAL (#0d9488)
+ * - Storage Tank: TEAL (#0d9488)
+ * - Reactor: RED (#dc2626)
+ * - Heat Exchanger: AMBER (#f59e0b)
+ * - Heater: ORANGE (#ea580c)
+ * - Cooler: CYAN (#06b6d4)
+ * - Compressor: VIOLET (#7c3aed)
+ * - Column: VIOLET (#7c3aed)
+ * - Separator: GREEN (#10b981)
+ * - Valve: RED (#dc2626)
+ * - Filter: BROWN (#a16207)
+ * - Motor: SLATE (#475569)
+ * - Pipe: GREY (#64748b)
  */
 
 interface ModelProps {
@@ -28,34 +31,32 @@ interface ModelProps {
   selected?: boolean;
 }
 
-// ─── Material families ────────────────────────────────────────────────
-
 function useMaterials(color: string, emphasized?: boolean, dimmed?: boolean) {
   return useMemo(() => {
     const transparent = dimmed ?? false;
     const opacity = dimmed ? 0.16 : 1;
 
-    // Carbon steel — vessels, tanks. Cool grey-blue, medium metalness.
-    const carbonSteel = new THREE.MeshStandardMaterial({
+    // Primary vessel material — uses the equipment's color
+    const vessel = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color),
-      metalness: 0.7,
-      roughness: 0.45,
+      metalness: 0.65,
+      roughness: 0.4,
       transparent,
       opacity,
       emissive: new THREE.Color(color),
-      emissiveIntensity: emphasized ? 0.12 : 0,
+      emissiveIntensity: emphasized ? 0.15 : 0.02,
     });
 
-    // Stainless steel — pipes, nozzles, bright fittings. Lower roughness.
+    // Stainless steel — pipes, nozzles, flanges
     const stainless = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#9ca3af"),
       metalness: 0.85,
-      roughness: 0.28,
+      roughness: 0.25,
       transparent,
       opacity,
     });
 
-    // Dark steel — flanges, motor housings, structural.
+    // Dark steel — motors, structural
     const darkSteel = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#374151"),
       metalness: 0.75,
@@ -64,7 +65,7 @@ function useMaterials(color: string, emphasized?: boolean, dimmed?: boolean) {
       opacity,
     });
 
-    // Painted structural steel — safety yellow, matte.
+    // Painted steel — safety yellow for handrails, platforms
     const paintedSteel = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#facc15"),
       metalness: 0.3,
@@ -73,36 +74,18 @@ function useMaterials(color: string, emphasized?: boolean, dimmed?: boolean) {
       opacity,
     });
 
-    // Insulation cladding — off-white, low metalness.
-    const insulation = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#d1d5db"),
-      metalness: 0.25,
-      roughness: 0.65,
-      transparent,
-      opacity,
-    });
-
-    // Glass — level gauges, sight glasses.
+    // Glass — level gauges, sight glasses
     const glass = new THREE.MeshStandardMaterial({
       color: new THREE.Color(color),
       metalness: 0.1,
-      roughness: 0.12,
+      roughness: 0.1,
       transparent: true,
-      opacity: dimmed ? 0.05 : 0.4,
+      opacity: dimmed ? 0.05 : 0.45,
       emissive: new THREE.Color(color),
-      emissiveIntensity: emphasized ? 0.25 : 0.08,
+      emissiveIntensity: emphasized ? 0.3 : 0.1,
     });
 
-    // Rubber / gasket — black, very rough.
-    const rubber = new THREE.MeshStandardMaterial({
-      color: new THREE.Color("#1f2937"),
-      metalness: 0.1,
-      roughness: 0.9,
-      transparent,
-      opacity,
-    });
-
-    // Hazard — red valves, emergency equipment.
+    // Hazard — red for valves, emergency
     const hazard = new THREE.MeshStandardMaterial({
       color: new THREE.Color("#dc2626"),
       metalness: 0.4,
@@ -111,7 +94,7 @@ function useMaterials(color: string, emphasized?: boolean, dimmed?: boolean) {
       opacity,
     });
 
-    return { carbonSteel, stainless, darkSteel, paintedSteel, insulation, glass, rubber, hazard };
+    return { vessel, stainless, darkSteel, paintedSteel, glass, hazard };
   }, [color, emphasized, dimmed]);
 }
 
@@ -184,22 +167,22 @@ function StirredReactor({ color, emphasized, dimmed }: ModelProps) {
       </mesh>
 
       {/* Vessel shell */}
-      <mesh position={[0, height / 2 + 0.4, 0]} castShadow receiveShadow material={m.carbonSteel}>
+      <mesh position={[0, height / 2 + 0.4, 0]} castShadow receiveShadow material={m.vessel}>
         <cylinderGeometry args={[r, r, height, 40]} />
       </mesh>
 
       {/* External jacket — slightly larger shell with gap */}
-      <mesh position={[0, height / 2 + 0.4, 0]} material={m.insulation}>
+      <mesh position={[0, height / 2 + 0.4, 0]} material={m.vessel}>
         <cylinderGeometry args={[r + 0.06, r + 0.06, height * 0.85, 36]} />
       </mesh>
 
       {/* Dished top head */}
-      <mesh position={[0, height + 0.4, 0]} material={m.carbonSteel}>
+      <mesh position={[0, height + 0.4, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.8]} />
       </mesh>
 
       {/* Dished bottom head */}
-      <mesh position={[0, 0.4, 0]} material={m.carbonSteel}>
+      <mesh position={[0, 0.4, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, Math.PI - Math.PI / 2.8, Math.PI / 2.8]} />
       </mesh>
 
@@ -250,7 +233,7 @@ function FixedBedReactor({ color, emphasized, dimmed }: ModelProps) {
       </mesh>
 
       {/* Tall pressure vessel */}
-      <mesh position={[0, height / 2 + 0.4, 0]} castShadow receiveShadow material={m.carbonSteel}>
+      <mesh position={[0, height / 2 + 0.4, 0]} castShadow receiveShadow material={m.vessel}>
         <cylinderGeometry args={[r, r, height, 32]} />
       </mesh>
 
@@ -258,12 +241,12 @@ function FixedBedReactor({ color, emphasized, dimmed }: ModelProps) {
       <TrayRings count={5} radius={r - 0.05} height={height * 0.6} startY={height * 0.2 + 0.4} material={m.stainless} />
 
       {/* Domed top head */}
-      <mesh position={[0, height + 0.4, 0]} material={m.carbonSteel}>
+      <mesh position={[0, height + 0.4, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
       </mesh>
 
       {/* Bottom head */}
-      <mesh position={[0, 0.4, 0]} material={m.carbonSteel}>
+      <mesh position={[0, 0.4, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
       </mesh>
 
@@ -310,7 +293,7 @@ function DistillationColumn({ color, emphasized, dimmed }: ModelProps) {
       </mesh>
 
       {/* Tall slender shell */}
-      <mesh position={[0, height / 2 + 0.5, 0]} castShadow receiveShadow material={m.carbonSteel}>
+      <mesh position={[0, height / 2 + 0.5, 0]} castShadow receiveShadow material={m.vessel}>
         <cylinderGeometry args={[r, r, height, 32]} />
       </mesh>
 
@@ -318,11 +301,11 @@ function DistillationColumn({ color, emphasized, dimmed }: ModelProps) {
       <TrayRings count={14} radius={r} height={height - 1} startY={1.0} material={m.stainless} />
 
       {/* Top head */}
-      <mesh position={[0, height + 0.5, 0]} material={m.carbonSteel}>
+      <mesh position={[0, height + 0.5, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
       </mesh>
       {/* Bottom head */}
-      <mesh position={[0, 0.5, 0]} material={m.carbonSteel}>
+      <mesh position={[0, 0.5, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
       </mesh>
 
@@ -376,7 +359,7 @@ function ShellTubeHeatExchanger({ color, emphasized, dimmed }: ModelProps) {
   return (
     <group rotation={[0, 0, Math.PI / 2]} position={[0, 1.0, 0]}>
       {/* Horizontal shell */}
-      <mesh castShadow receiveShadow material={m.carbonSteel}>
+      <mesh castShadow receiveShadow material={m.vessel}>
         <cylinderGeometry args={[r, r, length, 28]} />
       </mesh>
 
@@ -439,7 +422,7 @@ function CentrifugalPump({ color, emphasized, dimmed }: ModelProps) {
       </mesh>
 
       {/* Volute casing — snail-shell shape */}
-      <mesh position={[0, 0.5, 0]} castShadow material={m.carbonSteel}>
+      <mesh position={[0, 0.5, 0]} castShadow material={m.vessel}>
         <torusGeometry args={[0.35, 0.22, 16, 32, Math.PI * 1.6]} />
       </mesh>
       {/* Casing cover */}
@@ -501,7 +484,7 @@ function CentrifugalCompressor({ color, emphasized, dimmed }: ModelProps) {
       </mesh>
 
       {/* 3-stage compressor body — horizontal barrel */}
-      <mesh position={[0.4, 0.75, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={m.carbonSteel}>
+      <mesh position={[0.4, 0.75, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={m.vessel}>
         <cylinderGeometry args={[0.45, 0.45, 1.4, 32]} />
       </mesh>
       {/* Stage dividers */}
@@ -564,16 +547,16 @@ function StorageTankModel({ color, emphasized, dimmed, large }: ModelProps & { l
       </mesh>
 
       {/* Body — wide and short */}
-      <mesh position={[0, height / 2 + 0.3, 0]} castShadow receiveShadow material={m.carbonSteel}>
+      <mesh position={[0, height / 2 + 0.3, 0]} castShadow receiveShadow material={m.vessel}>
         <cylinderGeometry args={[r, r, height, 40]} />
       </mesh>
 
       {/* Domed top (slightly domed, not flat) */}
-      <mesh position={[0, height + 0.3, 0]} material={m.carbonSteel}>
+      <mesh position={[0, height + 0.3, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 40, 20, 0, Math.PI * 2, 0, Math.PI / 4]} />
       </mesh>
       {/* Bottom head */}
-      <mesh position={[0, 0.3, 0]} material={m.carbonSteel}>
+      <mesh position={[0, 0.3, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 40, 20, 0, Math.PI * 2, Math.PI - Math.PI / 4, Math.PI / 4]} />
       </mesh>
 
@@ -639,7 +622,7 @@ function VesselSeparator({ color, emphasized, dimmed }: ModelProps) {
       })}
 
       {/* Vessel */}
-      <mesh position={[0, height / 2 + 0.5, 0]} castShadow receiveShadow material={m.carbonSteel}>
+      <mesh position={[0, height / 2 + 0.5, 0]} castShadow receiveShadow material={m.vessel}>
         <cylinderGeometry args={[r, r, height, 32]} />
       </mesh>
 
@@ -649,11 +632,11 @@ function VesselSeparator({ color, emphasized, dimmed }: ModelProps) {
       </mesh>
 
       {/* Top head */}
-      <mesh position={[0, height + 0.5, 0]} material={m.carbonSteel}>
+      <mesh position={[0, height + 0.5, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2.5]} />
       </mesh>
       {/* Bottom head */}
-      <mesh position={[0, 0.5, 0]} material={m.carbonSteel}>
+      <mesh position={[0, 0.5, 0]} material={m.vessel}>
         <sphereGeometry args={[r, 32, 16, 0, Math.PI * 2, Math.PI - Math.PI / 2.5, Math.PI / 2.5]} />
       </mesh>
 
@@ -687,7 +670,7 @@ function FiredHeater({ color, emphasized, dimmed }: ModelProps) {
   return (
     <group>
       {/* Firebox (rectangular) — real reformer is 5-10m tall */}
-      <mesh position={[0, 4, 0]} castShadow receiveShadow material={m.carbonSteel}>
+      <mesh position={[0, 4, 0]} castShadow receiveShadow material={m.vessel}>
         <boxGeometry args={[5, 8, 4]} />
       </mesh>
 
@@ -758,7 +741,7 @@ function AirCooler({ color, emphasized, dimmed }: ModelProps) {
   return (
     <group rotation={[0, 0, Math.PI / 2]} position={[0, 0.9, 0]}>
       {/* Core tube */}
-      <mesh castShadow material={m.carbonSteel}>
+      <mesh castShadow material={m.vessel}>
         <cylinderGeometry args={[r, r, len, 24]} />
       </mesh>
 
@@ -902,7 +885,7 @@ function ElectricMotor({ color, emphasized, dimmed }: ModelProps) {
       <mesh position={[0, 0.04, 0]} castShadow receiveShadow material={m.darkSteel}>
         <boxGeometry args={[1.6, 0.08, 0.9]} />
       </mesh>
-      <mesh position={[-0.1, 0.55, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={m.carbonSteel}>
+      <mesh position={[-0.1, 0.55, 0]} rotation={[0, 0, Math.PI / 2]} castShadow material={m.vessel}>
         <cylinderGeometry args={[0.36, 0.36, 1.0, 28]} />
       </mesh>
       {/* Cooling fins */}
