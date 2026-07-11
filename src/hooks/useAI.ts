@@ -149,62 +149,6 @@ function applyAction(
 }
 
 /**
- * Generates the narration script + renders audio segments in the background
- * after the plant is loaded. Stores the result in a global so usePodcastTour
- * can pick it up when the user enters the simulation.
- */
-async function generateTourInBackground(plantId: string) {
-  try {
-    // Step 1: Generate the narration script
-    const scriptRes = await fetch("/api/generate-tour", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plantId }),
-    });
-    if (!scriptRes.ok) return;
-    const scriptData = await scriptRes.json();
-    const segments: { text: string; equipmentId?: string; emotion?: string }[] = scriptData.segments || [];
-
-    if (segments.length === 0) return;
-
-    // Step 2: Render each segment to audio via Cartesia TTS
-    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
-    const buffers: AudioBuffer[] = [];
-
-    for (const segment of segments) {
-      try {
-        const ttsRes = await fetch("/api/tts", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ text: segment.text }),
-        });
-        if (!ttsRes.ok) continue;
-        const contentType = ttsRes.headers.get("content-type") || "";
-        if (!contentType.includes("audio")) continue;
-        const arrayBuffer = await ttsRes.arrayBuffer();
-        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
-        buffers.push(audioBuffer);
-      } catch {
-        // Add silent placeholder
-        const silence = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
-        buffers.push(silence);
-      }
-    }
-
-    // Store the pre-generated tour globally so usePodcastTour can pick it up
-    (window as any).__preGeneratedTour = {
-      segments,
-      audioBuffers: buffers,
-      audioContext: audioCtx,
-      ready: true,
-    };
-    console.log(`[tour] Pre-generated ${segments.length} segments, ${buffers.length} audio buffers ready`);
-  } catch (err) {
-    console.error("[tour] background generation failed", err);
-  }
-}
-
-/**
  * Builds a plant from a natural-language command.
  */
 export function usePlantBuilder() {
@@ -261,11 +205,8 @@ export function usePlantBuilder() {
         setCurrentCaption(data.intro);
         const speak = (window as any).__plantSpeak as ((t: string) => void) | undefined;
         if (speak) speak(data.intro);
-
-        // Generate narration in the background — script + audio segments
-        // This runs AFTER the plant is loaded so the user sees the 3D scene
-        // immediately, while the tour audio is being prepared.
-        generateTourInBackground(data.plantId);
+        // Tour narration is now generated in the chat build phase (WelcomeScreen)
+        // not here in the simulation.
       } catch (err) {
         console.error("[build-plant] failed", err);
         setGenerating(false);

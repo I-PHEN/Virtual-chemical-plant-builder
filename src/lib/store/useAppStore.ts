@@ -14,6 +14,8 @@ interface AppState {
   currentPlant: PlantTemplate | null;
   plantIntro: string;
   isGenerating: boolean;
+  /** Whether the narration audio has been generated (build phase) */
+  narrationReady: boolean;
 
   // Equipment display
   displayStates: Record<string, DisplayState>; // by equipment id
@@ -42,6 +44,7 @@ interface AppState {
   // Actions
   setPlant: (plant: PlantTemplate, intro: string) => void;
   setGenerating: (v: boolean) => void;
+  setNarrationReady: (v: boolean) => void;
   selectEquipment: (id: string | null) => void;
   focusEquipment: (id: string | null) => void;
   setHighlight: (type: EquipmentType | null) => void;
@@ -66,6 +69,7 @@ export const useAppStore = create<AppState>((set, get) => ({
   currentPlant: null,
   plantIntro: "",
   isGenerating: false,
+  narrationReady: false,
 
   displayStates: {},
   selectedEquipmentId: null,
@@ -88,7 +92,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     set({
       currentPlant: plant,
       plantIntro: intro,
-      isGenerating: false,
+      // Don't clear isGenerating here — the chat clears it after narration is done
       displayStates: Object.fromEntries(
         plant.equipment.map((e) => [e.id, "visible" as DisplayState])
       ),
@@ -103,6 +107,7 @@ export const useAppStore = create<AppState>((set, get) => ({
     }),
 
   setGenerating: (v) => set({ isGenerating: v }),
+  setNarrationReady: (v) => set({ narrationReady: v }),
 
   selectEquipment: (id) => set({ selectedEquipmentId: id }),
 
@@ -183,6 +188,7 @@ export const useAppStore = create<AppState>((set, get) => ({
       messages: [],
       currentCaption: "",
       captionProgress: 0,
+      narrationReady: false,
     }),
 }));
 

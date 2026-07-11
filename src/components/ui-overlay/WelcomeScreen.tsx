@@ -15,7 +15,60 @@ interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
-  status?: "building" | "ready";
+  status?: "building" | "ready" | "narration";
+}
+
+/**
+ * Generates the narration script + renders audio segments.
+ * Called during the chat build phase so the tour is ready before entering
+ * the simulation. Stores the result in window.__preGeneratedTour.
+ */
+async function generateTourForChat(plantId: string): Promise<void> {
+  try {
+    // Step 1: Generate the narration script
+    const scriptRes = await fetch("/api/generate-tour", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ plantId }),
+    });
+    if (!scriptRes.ok) return;
+    const scriptData = await scriptRes.json();
+    const segments: { text: string; equipmentId?: string; emotion?: string }[] = scriptData.segments || [];
+    if (segments.length === 0) return;
+
+    // Step 2: Render each segment to audio via Cartesia TTS
+    const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+    const buffers: AudioBuffer[] = [];
+
+    for (const segment of segments) {
+      try {
+        const ttsRes = await fetch("/api/tts", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: segment.text }),
+        });
+        if (!ttsRes.ok) continue;
+        const contentType = ttsRes.headers.get("content-type") || "";
+        if (!contentType.includes("audio")) continue;
+        const arrayBuffer = await ttsRes.arrayBuffer();
+        const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
+        buffers.push(audioBuffer);
+      } catch {
+        const silence = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+        buffers.push(silence);
+      }
+    }
+
+    (window as any).__preGeneratedTour = {
+      segments,
+      audioBuffers: buffers,
+      audioContext: audioCtx,
+      ready: true,
+    };
+    console.log(`[tour] Chat-phase pre-generated ${segments.length} segments`);
+  } catch (err) {
+    console.error("[tour] chat-phase generation failed", err);
+  }
 }
 
 const ICONS: Record<string, React.ReactNode> = {
@@ -35,12 +88,14 @@ const ACCENT: Record<string, string> = {
 export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
   const isGenerating = useAppStore((s) => s.isGenerating);
   const currentPlant = useAppStore((s) => s.currentPlant);
+  const setGenerating = useAppStore((s) => s.setGenerating);
+  const setNarrationReady = useAppStore((s) => s.setNarrationReady);
   const [command, setCommand] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversations, setConversations] = useState<{ id: string; title: string }[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const wasGeneratingRef = useRef(false);
+  const prevPlantRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
@@ -49,22 +104,37 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
 
-  // Watch for build completion
+  // Watch for plant being loaded (currentPlant set, isGenerating still true)
   useEffect(() => {
-    if (isGenerating) {
-      wasGeneratingRef.current = true;
-    } else if (wasGeneratingRef.current && currentPlant) {
-      wasGeneratingRef.current = false;
+    if (currentPlant && currentPlant.id !== prevPlantRef.current) {
+      prevPlantRef.current = currentPlant.id;
+      // Plant is loaded — now generate narration audio
+      const plantName = currentPlant.name.split(" (")[0];
+      const plantId = currentPlant.id;
+
+      // Show narration status immediately (deferred to avoid effect-setState lint)
       Promise.resolve().then(() => {
+        setMessages((prev) => [...prev, {
+          id: Date.now() + "n",
+          role: "assistant",
+          content: `Plant built! Now generating your guided tour narration…`,
+          status: "narration",
+        }]);
+      });
+
+      // Generate the tour script + audio in the background, then update the message
+      generateTourForChat(plantId).then(() => {
+        setNarrationReady(true);
+        setGenerating(false);
         setMessages((prev) => [...prev, {
           id: Date.now() + "r",
           role: "assistant",
-          content: `Done — the ${currentPlant.name.split(" (")[0]} is ready. Click below to enter.`,
+          content: `Done — the ${plantName} is ready with a guided audio tour. Click below to enter.`,
           status: "ready",
         }]);
       });
     }
-  }, [isGenerating, currentPlant]);
+  }, [currentPlant, setGenerating, setNarrationReady]);
 
   const sendMessage = (text: string) => {
     if (!text.trim() || isGenerating) return;
@@ -353,6 +423,16 @@ function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterS
             <span className="text-[10px] font-medium text-sky-300">Building plant…</span>
             <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-black/40">
               <div className="h-full w-1/3 animate-pulse rounded-full bg-sky-400" />
+            </div>
+          </div>
+        )}
+
+        {message.status === "narration" && (
+          <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5">
+            <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
+            <span className="text-[10px] font-medium text-violet-300">Generating tour narration…</span>
+            <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-black/40">
+              <div className="h-full w-1/3 animate-pulse rounded-full bg-violet-400" />
             </div>
           </div>
         )}

@@ -24,18 +24,16 @@ export function PodcastTour() {
 
   if (!currentPlant || dismissed) return null;
 
-  // While generating the tour (either via build phase or manual)
-  if (isGenerating || (!tourReady && !isGenerating && segments.length === 0)) {
-    // Check if tour is being generated in the background (from build phase)
+  // While loading pre-generated tour from chat build phase
+  if (!tourReady && !isGenerating && segments.length === 0) {
     const preGen = typeof window !== "undefined" && (window as any).__preGeneratedTour;
-    const isBuilding = !preGen?.ready && !tourReady;
-
-    if (isBuilding) {
+    if (!preGen?.ready) {
+      // Still being generated in the chat
       return (
         <div className="pointer-events-auto absolute left-1/2 top-16 z-20 -translate-x-1/2">
-          <div className="flex items-center gap-2.5 rounded-xl border border-sky-500/20 bg-slate-950/80 px-3 py-2 shadow-2xl backdrop-blur">
-            <Loader2 className="h-3.5 w-3.5 animate-spin text-sky-400" />
-            <span className="text-[11px] text-slate-400">Preparing tour audio…</span>
+          <div className="flex items-center gap-2.5 rounded-xl border border-violet-500/20 bg-slate-950/80 px-3 py-2 shadow-2xl backdrop-blur">
+            <Loader2 className="h-3.5 w-3.5 animate-spin text-violet-400" />
+            <span className="text-[11px] text-slate-400">Loading tour audio…</span>
           </div>
         </div>
       );
@@ -56,7 +54,7 @@ export function PodcastTour() {
     );
   }
 
-  // Tour is ready and playing — show playback controls
+  // Tour is ready — show playback controls immediately
   if (tourReady) {
     const progress = segments.length > 0 ? ((currentSegment + 1) / segments.length) * 100 : 0;
     return (
@@ -122,19 +120,6 @@ export function PodcastTour() {
     );
   }
 
-  // Initial state — show "Start Guided Tour" button
-  return (
-    <div className="pointer-events-auto absolute left-1/2 top-16 z-20 -translate-x-1/2">
-      <button
-        onClick={generateTour}
-        className="flex items-center gap-2.5 rounded-xl border border-sky-500/30 bg-sky-500/10 px-4 py-2.5 shadow-2xl backdrop-blur transition-all hover:border-sky-500/50 hover:bg-sky-500/20"
-      >
-        <Radio className="h-4 w-4 text-sky-400" />
-        <div className="text-left">
-          <div className="text-[12px] font-medium text-sky-300">Start Guided Tour</div>
-          <div className="text-[9px] text-slate-500">AI narrates while you explore</div>
-        </div>
-      </button>
-    </div>
-  );
+  // Fallback — shouldn't normally reach here
+  return null;
 }
