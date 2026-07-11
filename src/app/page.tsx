@@ -15,6 +15,7 @@ import { CaptionBar } from "@/components/ui-overlay/CaptionBar";
 import { TourAutoAdvance } from "@/components/ui-overlay/TourAutoAdvance";
 import { CameraControls } from "@/components/ui-overlay/CameraControls";
 import { AmbientAudio } from "@/components/ui-overlay/AmbientAudio";
+import { PodcastTour } from "@/components/ui-overlay/PodcastTour";
 
 // React Three Fiber requires WebGL — load the canvas only on the client.
 const PlantCanvas = dynamic(
@@ -89,6 +90,9 @@ export default function Home() {
 
           {/* Ambient industrial audio — only active in simulation */}
           <AmbientAudio active={!!currentPlant && !isGenerating} />
+
+          {/* Podcast tour — pre-generated narration with camera sync */}
+          <PodcastTour />
 
           {/* top-left: header */}
           <div className="pointer-events-auto absolute left-0 top-0 z-10">

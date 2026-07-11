@@ -14,6 +14,7 @@ import { CameraController } from "./CameraController";
 import { PipeRackStructure, Bund, Platform, Stairway } from "./Structures";
 import { SafetyShower, FireExtinguisher, WarningSign, DrainageChannel, ServiceRoad } from "./SafetySystems";
 import { SteamPlume, DustParticles } from "./AtmosphericEffects";
+import { ControlPanel, CableTray, SafetyCone, SpinningFan, WorkerFigure, HandrailSection } from "./IndustrialClutter";
 
 export function PlantCanvas() {
   const currentPlant = useAppStore((s) => s.currentPlant);
@@ -130,6 +131,20 @@ export function PlantCanvas() {
 
             {/* Service road on the perimeter */}
             <ServiceRoad position={[0, 0, 14]} length={30} width={4} rotation={0} />
+
+            {/* Industrial clutter — makes the plant feel lived-in */}
+            <ControlPanel position={[6, 0, 4]} rotation={-Math.PI / 2} />
+            <ControlPanel position={[-8, 0, -4]} rotation={Math.PI / 4} />
+            <CableTray position={[-10, 0, 0]} length={12} rotation={Math.PI / 2} height={3} />
+            <CableTray position={[8, 0, 0]} length={10} rotation={Math.PI / 2} height={3} />
+            <SafetyCone position={[2, 0, -3]} />
+            <SafetyCone position={[12, 0, 6]} />
+            <SpinningFan position={[-15, 2.5, 5]} speed={3} />
+            <SpinningFan position={[15, 2.5, -5]} speed={2.5} rotation={Math.PI} />
+            <WorkerFigure position={[0, 0, 8]} rotation={0.5} />
+            <WorkerFigure position={[-5, 0, -8]} rotation={-1.2} />
+            <HandrailSection position={[0, 0, 10]} length={6} rotation={0} />
+            <HandrailSection position={[-8, 0, 8]} length={4} rotation={Math.PI / 2} />
 
             <PipeNetwork
               equipment={currentPlant.equipment}
