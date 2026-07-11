@@ -1,0 +1,18 @@
+{
+  "id": "centrifugal-compressor-v1",
+  "glbPath": "/assets/models/equipment/centrifugal-compressor-v1.glb",
+  "equipmentTypes": ["compressor", "pump", "motor"],
+  "primaryFunction": "Centrifugal compressor skid with motor, baseplate, and piping — the iconic rotating equipment of any plant.",
+  "footprint": { "w": 6, "d": 3, "h": 4 },
+  "connectionPoints": [
+    { "name": "suction", "position": [-3, 1, 0], "direction": [-1, 0, 0], "role": "inlet", "material": "gas" },
+    { "name": "discharge", "position": [3, 1.5, 0], "direction": [1, 0, 0], "role": "outlet", "material": "gas" },
+    { "name": "seal_gas", "position": [0, 2, 1.5], "direction": [0, 1, 0], "role": "utility", "material": "gas" },
+    { "name": "lube_oil", "position": [0, -1, 1.5], "direction": [0, -1, 0], "role": "utility", "material": "liquid" }
+  ],
+  "scale": 1,
+  "tags": ["ammonia", "compression", "rotating", "syngas", "high-pressure"],
+  "qualityTier": "hero",
+  "source": "TODO: user-supplied GLB from Sketchfab",
+  "license": "TODO: confirm with source"
+}

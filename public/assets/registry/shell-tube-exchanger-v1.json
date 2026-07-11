@@ -1,0 +1,18 @@
+{
+  "id": "shell-tube-exchanger-v1",
+  "glbPath": "/assets/models/equipment/shell-tube-exchanger-v1.glb",
+  "equipmentTypes": ["heatExchanger", "cooler", "heater", "evaporator"],
+  "primaryFunction": "Horizontal shell-and-tube heat exchanger with bonnets and flanged ends.",
+  "footprint": { "w": 8, "d": 2, "h": 2.5 },
+  "connectionPoints": [
+    { "name": "tube_in", "position": [-4, 0, 0], "direction": [-1, 0, 0], "role": "inlet", "material": "liquid" },
+    { "name": "tube_out", "position": [4, 0, 0], "direction": [1, 0, 0], "role": "outlet", "material": "liquid" },
+    { "name": "shell_in", "position": [0, 1, 1], "direction": [0, 1, 0], "role": "inlet", "material": "steam" },
+    { "name": "shell_out", "position": [0, -1, -1], "direction": [0, -1, 0], "role": "outlet", "material": "condensate" }
+  ],
+  "scale": 1,
+  "tags": ["heat", "transfer", "shell", "tube", "horizontal"],
+  "qualityTier": "standard",
+  "source": "TODO: user-supplied GLB from Sketchfab",
+  "license": "TODO: confirm with source"
+}

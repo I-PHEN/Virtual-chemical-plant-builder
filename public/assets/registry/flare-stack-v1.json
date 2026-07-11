@@ -1,0 +1,17 @@
+{
+  "id": "flare-stack-v1",
+  "glbPath": "/assets/models/equipment/flare-stack-v1.glb",
+  "equipmentTypes": ["flareStack"],
+  "primaryFunction": "Tall flare stack with guy wires or skirt and flame tip, for safe disposal of waste gases.",
+  "footprint": { "w": 2, "d": 2, "h": 80 },
+  "connectionPoints": [
+    { "name": "flare_header", "position": [0, -40, 0], "direction": [0, -1, 0], "role": "inlet", "material": "gas" },
+    { "name": "purge_gas", "position": [1, -38, 0], "direction": [1, 0, 0], "role": "utility", "material": "gas" },
+    { "name": "pilot_gas", "position": [-1, -38, 0], "direction": [-1, 0, 0], "role": "utility", "material": "gas" }
+  ],
+  "scale": 1,
+  "tags": ["safety", "flare", "vent", "tall", "iconic"],
+  "qualityTier": "hero",
+  "source": "TODO: user-supplied GLB from Sketchfab",
+  "license": "TODO: confirm with source"
+}

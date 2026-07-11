@@ -1,0 +1,19 @@
+{
+  "id": "distillation-column-v1",
+  "glbPath": "/assets/models/equipment/distillation-column-v1.glb",
+  "equipmentTypes": ["column", "reformer", "flareStack"],
+  "primaryFunction": "Tall tray column with external platforms and tray bands, used for distillation, absorption, or stripping.",
+  "footprint": { "w": 5, "d": 5, "h": 49 },
+  "connectionPoints": [
+    { "name": "feed_middle", "position": [2.5, 0, 0], "direction": [1, 0, 0], "role": "inlet", "material": "liquid" },
+    { "name": "overhead_top", "position": [0, 24.5, 0], "direction": [0, 1, 0], "role": "outlet", "material": "gas" },
+    { "name": "bottoms_outlet", "position": [0, -24.5, 0], "direction": [0, -1, 0], "role": "outlet", "material": "liquid" },
+    { "name": "reflux_in", "position": [-2.5, 22, 0], "direction": [-1, 0, 0], "role": "inlet", "material": "liquid" },
+    { "name": "reboiler_return", "position": [-2.5, -22, 0], "direction": [-1, 0, 0], "role": "inlet", "material": "two-phase" }
+  ],
+  "scale": 1,
+  "tags": ["ammonia", "distillation", "absorption", "tall", "tray"],
+  "qualityTier": "hero",
+  "source": "TODO: user-supplied GLB from Sketchfab",
+  "license": "TODO: confirm with source"
+}

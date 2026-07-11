@@ -1,0 +1,19 @@
+{
+  "id": "vertical-reactor-v1",
+  "glbPath": "/assets/models/equipment/vertical-reactor-v1.glb",
+  "equipmentTypes": ["reactor", "separator", "steamDrum", "desulfurizer", "evaporator"],
+  "primaryFunction": "Vertical pressure vessel with platform and ladder, used as a reactor, separator, or drum.",
+  "footprint": { "w": 4, "d": 4, "h": 18 },
+  "connectionPoints": [
+    { "name": "inlet_top", "position": [0, 9, 0], "direction": [0, 1, 0], "role": "inlet", "material": "gas" },
+    { "name": "outlet_bottom", "position": [0, -9, 0], "direction": [0, -1, 0], "role": "outlet", "material": "liquid" },
+    { "name": "side_inlet", "position": [2, 0, 0], "direction": [1, 0, 0], "role": "inlet", "material": "gas" },
+    { "name": "side_outlet", "position": [-2, 0, 0], "direction": [-1, 0, 0], "role": "outlet", "material": "two-phase" },
+    { "name": "vent_top", "position": [0, 9, 1.5], "direction": [0, 1, 0], "role": "vent", "material": "gas" }
+  ],
+  "scale": 1,
+  "tags": ["ammonia", "high-pressure", "catalytic", "vessel", "vertical"],
+  "qualityTier": "hero",
+  "source": "TODO: user-supplied GLB from Sketchfab",
+  "license": "TODO: confirm with source"
+}

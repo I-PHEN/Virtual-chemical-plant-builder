@@ -1,0 +1,18 @@
+{
+  "id": "cooling-tower-v1",
+  "glbPath": "/assets/models/equipment/cooling-tower-v1.glb",
+  "equipmentTypes": ["coolingTower"],
+  "primaryFunction": "Forced-draft cooling tower cell, used for heat rejection from process cooling water.",
+  "footprint": { "w": 10, "d": 10, "h": 14 },
+  "connectionPoints": [
+    { "name": "hot_return", "position": [-5, 0, 0], "direction": [-1, 0, 0], "role": "inlet", "material": "liquid" },
+    { "name": "cold_supply", "position": [5, 0, 0], "direction": [1, 0, 0], "role": "outlet", "material": "liquid" },
+    { "name": "makeup", "position": [0, 0, -5], "direction": [0, 0, -1], "role": "utility", "material": "liquid" },
+    { "name": "drain", "position": [0, -5, 5], "direction": [0, -1, 0], "role": "drain", "material": "liquid" }
+  ],
+  "scale": 1,
+  "tags": ["utility", "cooling", "water", "heat-rejection"],
+  "qualityTier": "hero",
+  "source": "TODO: user-supplied GLB from Sketchfab",
+  "license": "TODO: confirm with source"
+}
