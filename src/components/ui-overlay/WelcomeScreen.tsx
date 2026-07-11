@@ -16,6 +16,7 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   status?: "building" | "ready" | "narration";
+  progress?: number; // 0-100 live progress
 }
 
 /**
@@ -23,15 +24,17 @@ interface ChatMessage {
  * Called during the chat build phase so the tour is ready before entering
  * the simulation. Stores the result in window.__preGeneratedTour.
  */
-async function generateTourForChat(plantId: string): Promise<void> {
+async function generateTourForChat(plantId: string, onProgress?: (progress: number) => void): Promise<void> {
   try {
     // Step 1: Generate the narration script
+    if (onProgress) onProgress(5); // script generation starting
     const scriptRes = await fetch("/api/generate-tour", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ plantId }),
     });
     if (!scriptRes.ok) return;
+    if (onProgress) onProgress(15); // script generated
     const scriptData = await scriptRes.json();
     const segments: { text: string; equipmentId?: string; emotion?: string }[] = scriptData.segments || [];
     if (segments.length === 0) return;
@@ -41,7 +44,8 @@ async function generateTourForChat(plantId: string): Promise<void> {
     const buffers: AudioBuffer[] = [];
     let allFailed = false;
 
-    for (const segment of segments) {
+    for (let i = 0; i < segments.length; i++) {
+      const segment = segments[i];
       try {
         const ttsRes = await fetch("/api/tts", {
           method: "POST",
@@ -51,23 +55,23 @@ async function generateTourForChat(plantId: string): Promise<void> {
         if (!ttsRes.ok) throw new Error("TTS failed");
         const contentType = ttsRes.headers.get("content-type") || "";
         if (!contentType.includes("audio")) {
-          // Fallback signal from server — use browser TTS for this segment
           throw new Error("Server signaled fallback");
         }
         const arrayBuffer = await ttsRes.arrayBuffer();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
         buffers.push(audioBuffer);
       } catch {
-        // TTS failed — create a buffer with silence
-        // The play function will use browser SpeechSynthesis as fallback
         const silence = audioCtx.createBuffer(1, audioCtx.sampleRate * 1, audioCtx.sampleRate);
         buffers.push(silence);
         allFailed = true;
       }
+      // Report progress: 15% (script done) to 95% (all segments done)
+      const segmentProgress = 15 + ((i + 1) / segments.length) * 80;
+      if (onProgress) onProgress(Math.round(segmentProgress));
     }
 
-    // If ALL segments failed, still set the tour as ready with text-only segments
-    // (the player will use browser TTS to read each segment)
+    if (onProgress) onProgress(100);
+
     (window as any).__preGeneratedTour = {
       segments,
       audioBuffers: buffers,
@@ -123,17 +127,24 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
       const plantId = currentPlant.id;
 
       // Show narration status immediately (deferred to avoid effect-setState lint)
+      const narrationMsgId = Date.now() + "n";
       Promise.resolve().then(() => {
         setMessages((prev) => [...prev, {
-          id: Date.now() + "n",
+          id: narrationMsgId,
           role: "assistant",
           content: `Plant built! Now generating your guided tour narration…`,
           status: "narration",
+          progress: 0,
         }]);
       });
 
       // Generate the tour script + audio in the background, then update the message
-      generateTourForChat(plantId).then(() => {
+      generateTourForChat(plantId, (progress: number) => {
+        // Update progress bar on each TTS segment
+        setMessages((prev) => prev.map((m) =>
+          m.id === narrationMsgId ? { ...m, progress } : m
+        ));
+      }).then(() => {
         setNarrationReady(true);
         setGenerating(false);
         setMessages((prev) => [...prev, {
@@ -155,13 +166,27 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
     const isBuildRequest = lower.includes("build") || lower.includes("ammonia") || lower.includes("distillation") || lower.includes("sulfuric") || lower.includes("ethanol") || lower.includes("plant");
 
     if (isBuildRequest) {
+      const buildingMsgId = Date.now() + "b";
       setTimeout(() => {
         setMessages((prev) => [...prev, {
-          id: Date.now() + "b",
+          id: buildingMsgId,
           role: "assistant",
           content: "On it — assembling the plant now. Give me a few seconds.",
           status: "building",
+          progress: 0,
         }]);
+        // Animate the building progress bar
+        let prog = 0;
+        const buildInterval = setInterval(() => {
+          prog += 15 + Math.random() * 10;
+          if (prog >= 90) {
+            prog = 90;
+            clearInterval(buildInterval);
+          }
+          setMessages((prev) => prev.map((m) =>
+            m.id === buildingMsgId ? { ...m, progress: prog } : m
+          ));
+        }, 300);
       }, 500);
       const convId = Date.now().toString();
       const title = text.length > 30 ? text.slice(0, 30) + "…" : text;
@@ -431,9 +456,15 @@ function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterS
           <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-sky-500/20 bg-sky-500/5 px-2.5 py-1.5">
             <Loader2 className="h-3 w-3 animate-spin text-sky-400" />
             <span className="text-[10px] font-medium text-sky-300">Building plant…</span>
-            <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-black/40">
-              <div className="h-full w-full animate-pulse rounded-full bg-sky-400" />
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/40">
+              <div
+                className="h-full rounded-full bg-sky-400 transition-all duration-300"
+                style={{ width: `${message.progress ?? 0}%` }}
+              />
             </div>
+            {message.progress !== undefined && (
+              <span className="text-[9px] text-slate-500">{Math.round(message.progress)}%</span>
+            )}
           </div>
         )}
 
@@ -441,9 +472,15 @@ function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterS
           <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5">
             <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
             <span className="text-[10px] font-medium text-violet-300">Generating tour narration…</span>
-            <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-black/40">
-              <div className="h-full w-full animate-pulse rounded-full bg-violet-400" />
+            <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/40">
+              <div
+                className="h-full rounded-full bg-violet-400 transition-all duration-300"
+                style={{ width: `${message.progress ?? 0}%` }}
+              />
             </div>
+            {message.progress !== undefined && (
+              <span className="text-[9px] text-slate-500">{Math.round(message.progress)}%</span>
+            )}
           </div>
         )}
 
