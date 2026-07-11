@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
-import { PLANT_TEMPLATES, findPlantByCommand } from "@/lib/plant/templates";
+import {
+  PLANT_KNOWLEDGE_LIBRARY,
+  matchKnowledgeTemplate,
+} from "@/lib/plant/knowledge";
+import { layoutPlant } from "@/lib/plant/layout";
 import type { PlantBuilderResult } from "@/lib/plant/types";
 
 export const runtime = "nodejs";
@@ -11,10 +15,15 @@ interface BuildRequestBody {
 }
 
 /**
- * The AI Plant Builder interprets the student's spoken command and matches
- * it to one of the pre-built plant templates. We first try a deterministic
- * keyword match for speed; if that fails we ask the LLM to pick the closest
- * template, or to politely report that no template is available yet.
+ * The AI Plant Builder.
+ *
+ * Layered matching strategy:
+ *   1. Fast path: deterministic keyword match against knowledge templates.
+ *   2. Slow path: LLM picks the closest template.
+ *
+ * Once a template is chosen, the layout engine computes the full plant layout
+ * deterministically. The AI's job is selection; the layout engine's job is
+ * spatial arrangement. They never overlap.
  */
 export async function POST(req: NextRequest) {
   let body: BuildRequestBody;
@@ -29,19 +38,16 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Empty command" }, { status: 400 });
   }
 
-  // Fast path: deterministic keyword match
-  const localMatch = findPlantByCommand(command);
+  // Fast path: keyword match
+  const localMatch = matchKnowledgeTemplate(command);
   if (localMatch && localMatch.score >= 2) {
-    return NextResponse.json({
-      plantId: localMatch.template.id,
-      plantName: localMatch.template.name,
-      intro: buildIntro(localMatch.template.name, localMatch.template.processOverview),
-    } satisfies PlantBuilderResult);
+    return NextResponse.json(buildResult(localMatch.template));
   }
 
   // Slow path: ask the LLM to choose
-  const available = PLANT_TEMPLATES.map(
-    (p) => `- id: ${p.id}\n  name: ${p.name}\n  keywords: ${p.keywords.join(", ")}\n  description: ${p.description}`
+  const available = PLANT_KNOWLEDGE_LIBRARY.map(
+    (p) =>
+      `- id: ${p.id}\n  name: ${p.name}\n  keywords: ${p.keywords.join(", ")}\n  description: ${p.description}`
   ).join("\n");
 
   const systemPrompt = `You are the Plant Builder component of an AI Chemical Plant learning platform.
@@ -72,13 +78,9 @@ Reply with JSON only — no markdown, no commentary.`;
     const raw = completion.choices[0]?.message?.content ?? "{}";
     const parsed = JSON.parse(raw) as { plantId: string | null; reason?: string };
 
-    if (parsed.plantId && PLANT_TEMPLATES.some((p) => p.id === parsed.plantId)) {
-      const tpl = PLANT_TEMPLATES.find((p) => p.id === parsed.plantId)!;
-      return NextResponse.json({
-        plantId: tpl.id,
-        plantName: tpl.name,
-        intro: buildIntro(tpl.name, tpl.processOverview),
-      } satisfies PlantBuilderResult);
+    if (parsed.plantId) {
+      const tpl = PLANT_KNOWLEDGE_LIBRARY.find((p) => p.id === parsed.plantId);
+      if (tpl) return NextResponse.json(buildResult(tpl));
     }
 
     // No match
@@ -87,7 +89,7 @@ Reply with JSON only — no markdown, no commentary.`;
       plantName: "",
       intro:
         parsed.reason ??
-        "I don't have that plant yet. Try asking for an ammonia plant, a distillation plant, a sulfuric acid plant, or an ethanol plant.",
+        "I don't have that plant yet. Try asking for an ammonia plant — more are on the way.",
     } satisfies PlantBuilderResult);
   } catch (err) {
     console.error("[build-plant] error", err);
@@ -96,14 +98,36 @@ Reply with JSON only — no markdown, no commentary.`;
         plantId: "",
         plantName: "",
         intro:
-          "I had trouble building that plant just now. Try asking for an ammonia plant, a distillation plant, a sulfuric acid plant, or an ethanol plant.",
+          "I had trouble building that plant just now. Try asking for an ammonia plant.",
       } satisfies PlantBuilderResult,
       { status: 200 }
     );
   }
 }
 
-function buildIntro(name: string, overview: string): string {
+/**
+ * Build the full PlantBuilderResult from a chosen knowledge template.
+ * The layout engine runs here (server-side) so the client receives a fully
+ * placed plant ready to render.
+ */
+function buildResult(template: Parameters<typeof layoutPlant>[0]): PlantBuilderResult {
+  const plant = layoutPlant(template);
+  const stages = template.stages.map((s) => s.name);
+  const equipmentCount = template.stages.reduce(
+    (sum, s) => sum + s.equipment.length,
+    0
+  );
+  return {
+    plantId: plant.id,
+    plantName: plant.name,
+    intro: buildIntro(plant.name, template.processOverview),
+    plant,
+    stages,
+    equipmentCount,
+  };
+}
+
+function buildIntro(name: string, _overview: string): string {
   const shortName = name.split(" (")[0];
   const variants = [
     `Hey! Welcome to the ${shortName}. I'm your process engineer — think of me as someone who's been working here for years and actually loves showing people around. We can walk through the whole thing together, or you can just click on anything that catches your eye and ask me about it. What sounds good?`,

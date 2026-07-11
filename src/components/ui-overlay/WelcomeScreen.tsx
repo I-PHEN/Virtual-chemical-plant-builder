@@ -1,11 +1,12 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
-import { Mic, ArrowUp, Settings, Atom, Plus, MessageSquare, PanelLeftClose, PanelLeft, Loader2, CheckCircle2, ArrowRight, Factory, FlaskConical, Wind, Wine } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Mic, ArrowUp, Settings, Atom, Plus, MessageSquare, PanelLeftClose, PanelLeft, Loader2, CheckCircle2, ArrowRight, Factory, FlaskConical, Wind, Wine, Bell, LogOut } from "lucide-react";
 import { PLANT_TEMPLATES } from "@/lib/plant/templates";
 import { useAppStore } from "@/lib/store/useAppStore";
 import { cn } from "@/lib/utils";
 import { SettingsDrawer } from "./SettingsDrawer";
+import type { PlantTemplate } from "@/lib/plant/types";
 
 interface WelcomeScreenProps {
   onBuild: (command: string) => void;
@@ -15,23 +16,25 @@ interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
-  status?: "building" | "ready" | "narration";
+  status?: "building" | "ready" | "narration" | "restored";
   progress?: number; // 0-100 live progress
+  stages?: string[];
+  equipmentCount?: number;
 }
 
 /**
  * Generates the narration script + renders audio segments.
- * Called during the chat build phase so the tour is ready before entering
- * the simulation. Stores the result in window.__preGeneratedTour.
+ * Sends the full plant object so the LLM has the layout-engine output.
+ * Stores the result in window.__preGeneratedTour.
  */
-async function generateTourForChat(plantId: string, onProgress?: (progress: number) => void): Promise<void> {
+async function generateTourForChat(plant: PlantTemplate, onProgress?: (progress: number) => void): Promise<void> {
   try {
     // Step 1: Generate the narration script
     if (onProgress) onProgress(5); // script generation starting
     const scriptRes = await fetch("/api/generate-tour", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plantId }),
+      body: JSON.stringify({ plant }),
     });
     if (!scriptRes.ok) return;
     if (onProgress) onProgress(15); // script generated
@@ -104,27 +107,107 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
   const currentPlant = useAppStore((s) => s.currentPlant);
   const setGenerating = useAppStore((s) => s.setGenerating);
   const setNarrationReady = useAppStore((s) => s.setNarrationReady);
+  const setPlant = useAppStore((s) => s.setPlant);
   const [command, setCommand] = useState("");
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [conversations, setConversations] = useState<{ id: string; title: string }[]>([]);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [notificationPerm, setNotificationPerm] = useState<NotificationPermission | "default">(
+    typeof Notification !== "undefined" ? Notification.permission : "default"
+  );
   const prevPlantRef = useRef<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => { inputRef.current?.focus(); }, []);
+
+  // Preload any GLB models in the registry so they're cached by the time
+  // the user enters the simulation. Procedural fallback handles the gap.
+  useEffect(() => {
+    import("@/components/scene/models/EquipmentRenderer").then((mod) => {
+      mod.preloadRegistryModels();
+    });
+  }, []);
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: "smooth" });
   }, [messages]);
+
+  // ─── On mount: try to restore a previously-built plant from localStorage ───
+  // This is the "you can leave, we'll notify you" UX. If the user refreshed
+  // mid-build, the plant itself was already saved by usePlantBuilder; we just
+  // need to surface it back in the chat as a "ready to enter" card.
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem("plant-explorer:current-plant");
+      if (!raw) return;
+      const data = JSON.parse(raw) as {
+        plant: PlantTemplate;
+        intro: string;
+        builtAt: number;
+      };
+      if (!data.plant || !data.plant.id) return;
+      // Don't auto-restore if a build is already in progress
+      if (currentPlant) return;
+      const plantName = data.plant.name.split(" (")[0];
+      setMessages([{
+        id: Date.now() + "r-restore",
+        role: "assistant",
+        content: `Welcome back. Your ${plantName} (${data.plant.equipment.length} equipment pieces) is still here from your last visit. Click below to enter, or start a new build.`,
+        status: "restored",
+      }]);
+    } catch {
+      // ignore parse errors
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // ─── Request notification permission lazily (only when a build starts) ───
+  const ensureNotificationPermission = useCallback(async () => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission === "default") {
+      const perm = await Notification.requestPermission();
+      setNotificationPerm(perm);
+    }
+  }, []);
+
+  // ─── Show a desktop notification when the tour is ready ───
+  const notifyTourReady = useCallback((plantName: string) => {
+    if (typeof Notification === "undefined") return;
+    if (Notification.permission !== "granted") return;
+    try {
+      new Notification("Your plant is ready", {
+        body: `${plantName} tour narration is generated. Click to enter the simulation.`,
+        tag: "plant-ready",
+      });
+    } catch {
+      // some browsers throw if icon is missing etc. — non-fatal
+    }
+  }, []);
+
+  // ─── Enter a restored plant (from localStorage) ───
+  const enterRestoredPlant = useCallback(() => {
+    try {
+      const raw = localStorage.getItem("plant-explorer:current-plant");
+      if (!raw) return;
+      const data = JSON.parse(raw) as {
+        plant: PlantTemplate;
+        intro: string;
+      };
+      if (!data.plant) return;
+      setPlant(data.plant, data.intro);
+      setNarrationReady(true);
+      onBuild("__enter_sim__");
+    } catch {
+      // ignore
+    }
+  }, [setPlant, setNarrationReady, onBuild]);
 
   // Watch for plant being loaded (currentPlant set, isGenerating still true)
   useEffect(() => {
     if (currentPlant && currentPlant.id !== prevPlantRef.current) {
       prevPlantRef.current = currentPlant.id;
-      // Plant is loaded — now generate narration audio
       const plantName = currentPlant.name.split(" (")[0];
-      const plantId = currentPlant.id;
 
       // Show narration status immediately (deferred to avoid effect-setState lint)
       const narrationMsgId = Date.now() + "n";
@@ -132,21 +215,21 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
         setMessages((prev) => [...prev, {
           id: narrationMsgId,
           role: "assistant",
-          content: `Plant built! Now generating your guided tour narration…`,
+          content: `Plant built — ${currentPlant.equipment.length} pieces across ${currentPlant.areas?.length ?? 0} process areas. Now generating your guided tour narration. This takes about a minute — feel free to leave the tab, I'll let you know when it's ready.`,
           status: "narration",
           progress: 0,
         }]);
       });
 
       // Generate the tour script + audio in the background, then update the message
-      generateTourForChat(plantId, (progress: number) => {
-        // Update progress bar on each TTS segment
+      generateTourForChat(currentPlant, (progress: number) => {
         setMessages((prev) => prev.map((m) =>
           m.id === narrationMsgId ? { ...m, progress } : m
         ));
       }).then(() => {
         setNarrationReady(true);
         setGenerating(false);
+        notifyTourReady(plantName);
         setMessages((prev) => [...prev, {
           id: Date.now() + "r",
           role: "assistant",
@@ -155,7 +238,7 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
         }]);
       });
     }
-  }, [currentPlant, setGenerating, setNarrationReady]);
+  }, [currentPlant, setGenerating, setNarrationReady, notifyTourReady]);
 
   const sendMessage = (text: string) => {
     if (!text.trim() || isGenerating) return;
@@ -166,6 +249,9 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
     const isBuildRequest = lower.includes("build") || lower.includes("ammonia") || lower.includes("distillation") || lower.includes("sulfuric") || lower.includes("ethanol") || lower.includes("plant");
 
     if (isBuildRequest) {
+      // Ask for notification permission so we can ping the user when the
+      // tour is ready — they can leave the tab and still get notified.
+      ensureNotificationPermission();
       const buildingMsgId = Date.now() + "b";
       setTimeout(() => {
         setMessages((prev) => [...prev, {
@@ -392,7 +478,12 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
             <div ref={scrollRef} className="flex-1 overflow-y-auto px-6 py-6">
               <div className="mx-auto max-w-xl space-y-2.5">
                 {messages.map((msg) => (
-                  <MessageBubble key={msg.id} message={msg} onEnterSim={() => onBuild("__enter_sim__")} />
+                  <MessageBubble
+                    key={msg.id}
+                    message={msg}
+                    onEnterSim={() => onBuild("__enter_sim__")}
+                    onEnterRestored={enterRestoredPlant}
+                  />
                 ))}
               </div>
             </div>
@@ -434,7 +525,15 @@ export function WelcomeScreen({ onBuild }: WelcomeScreenProps) {
 }
 
 /** Chat bubbles — user on right (sky), AI on left (dark glass) */
-function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterSim: () => void }) {
+function MessageBubble({
+  message,
+  onEnterSim,
+  onEnterRestored,
+}: {
+  message: ChatMessage;
+  onEnterSim: () => void;
+  onEnterRestored: () => void;
+}) {
   if (message.role === "user") {
     return (
       <div className="flex justify-end">
@@ -469,18 +568,39 @@ function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterS
         )}
 
         {message.status === "narration" && (
-          <div className="mt-1.5 flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5">
-            <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
-            <span className="text-[10px] font-medium text-violet-300">Generating tour narration…</span>
-            <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/40">
-              <div
-                className="h-full rounded-full bg-violet-400 transition-all duration-300"
-                style={{ width: `${message.progress ?? 0}%` }}
-              />
+          <div className="mt-1.5 space-y-2">
+            <div className="flex items-center gap-2 rounded-lg border border-violet-500/20 bg-violet-500/5 px-2.5 py-1.5">
+              <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
+              <span className="text-[10px] font-medium text-violet-300">Generating tour narration…</span>
+              <div className="h-1 flex-1 overflow-hidden rounded-full bg-black/40">
+                <div
+                  className="h-full rounded-full bg-violet-400 transition-all duration-300"
+                  style={{ width: `${message.progress ?? 0}%` }}
+                />
+              </div>
+              {message.progress !== undefined && (
+                <span className="text-[9px] text-slate-500">{Math.round(message.progress)}%</span>
+              )}
             </div>
-            {message.progress !== undefined && (
-              <span className="text-[9px] text-slate-500">{Math.round(message.progress)}%</span>
-            )}
+            <div className="flex items-start gap-1.5 rounded-md bg-amber-500/5 px-2 py-1 text-[9px] text-amber-300/80">
+              <Bell className="mt-px h-2.5 w-2.5 flex-shrink-0" />
+              <span>You can leave this tab — I&apos;ll send a notification when the tour is ready.</span>
+            </div>
+          </div>
+        )}
+
+        {message.status === "restored" && (
+          <div className="mt-1.5 rounded-lg border border-amber-500/30 bg-amber-500/5 p-2.5">
+            <div className="flex items-center gap-2">
+              <LogOut className="h-3.5 w-3.5 text-amber-400" />
+              <span className="text-[11px] font-medium text-amber-300">Welcome back</span>
+            </div>
+            <button
+              onClick={onEnterRestored}
+              className="mt-1.5 flex w-full items-center justify-center gap-1.5 rounded-lg bg-amber-500 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-amber-400"
+            >
+              Enter your previous plant <ArrowRight className="h-3 w-3" />
+            </button>
           </div>
         )}
 

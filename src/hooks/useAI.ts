@@ -1,9 +1,8 @@
 "use client";
 
 import { useAppStore } from "@/lib/store/useAppStore";
-import { getPlantById } from "@/lib/plant/templates";
 import { useCallback } from "react";
-import type { AssistantAction, ChatMessage, DisplayState, EquipmentType } from "@/lib/plant/types";
+import type { AssistantAction, ChatMessage, DisplayState, EquipmentType, PlantBuilderResult, PlantTemplate } from "@/lib/plant/types";
 
 function uid() {
   return Math.random().toString(36).slice(2, 10) + Date.now().toString(36);
@@ -150,6 +149,16 @@ function applyAction(
 
 /**
  * Builds a plant from a natural-language command.
+ *
+ * Flow:
+ *   1. POST /api/build-plant → AI picks the knowledge template, layout engine
+ *      computes the full PlantTemplate, returns it.
+ *   2. Save the plant to localStorage so a refresh doesn't lose it.
+ *   3. setPlant() loads it into the store (scene renders immediately).
+ *   4. The WelcomeScreen kicks off narration generation in parallel.
+ *
+ * The "you can leave, we'll notify you" UX lives in WelcomeScreen, not here —
+ * this hook just produces the plant.
  */
 export function usePlantBuilder() {
   const setGenerating = useAppStore((s) => s.setGenerating);
@@ -167,13 +176,9 @@ export function usePlantBuilder() {
           body: JSON.stringify({ command }),
         });
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = (await res.json()) as {
-          plantId: string;
-          plantName: string;
-          intro: string;
-        };
+        const data = (await res.json()) as PlantBuilderResult;
 
-        if (!data.plantId) {
+        if (!data.plantId || !data.plant) {
           setGenerating(false);
           addMessage({
             id: uid(),
@@ -187,17 +192,27 @@ export function usePlantBuilder() {
           return;
         }
 
-        const template = getPlantById(data.plantId);
-        if (!template) {
-          setGenerating(false);
-          return;
+        // Checkpoint to localStorage so a refresh doesn't lose the build
+        try {
+          localStorage.setItem(
+            "plant-explorer:current-plant",
+            JSON.stringify({
+              plant: data.plant,
+              intro: data.intro,
+              stages: data.stages,
+              equipmentCount: data.equipmentCount,
+              builtAt: Date.now(),
+              command,
+            })
+          );
+        } catch (e) {
+          // localStorage can fail (private mode, quota) — non-fatal
+          console.warn("[build-plant] could not checkpoint to localStorage", e);
         }
 
-        await new Promise((r) => setTimeout(r, 600));
-
-        // Load the plant (but keep isGenerating true — the chat will clear it
+        // Load the plant (keep isGenerating true — WelcomeScreen clears it
         // after narration is done)
-        setPlant(template, data.intro);
+        setPlant(data.plant, data.intro);
 
         // Speak the intro via the voice system
         const speak = (window as any).__plantSpeak as ((t: string) => void) | undefined;
@@ -217,4 +232,43 @@ export function usePlantBuilder() {
   );
 
   return { build };
+}
+
+/**
+ * Restore a previously-built plant from localStorage. Called on app startup
+ * so the "you can leave" UX actually works — refresh and the plant is still
+ * there, ready for the user to enter.
+ *
+ * Returns the plant + intro if found, null otherwise. The caller decides
+ * whether to enter the simulation directly or show the welcome screen with
+ * a "your plant is ready" message.
+ */
+export function usePlantRestorer(): {
+  restore: () => { plant: PlantTemplate; intro: string } | null;
+  clear: () => void;
+} {
+  const restore = useCallback(() => {
+    try {
+      const raw = localStorage.getItem("plant-explorer:current-plant");
+      if (!raw) return null;
+      const data = JSON.parse(raw) as {
+        plant: PlantTemplate;
+        intro: string;
+      };
+      if (!data.plant || !data.plant.id) return null;
+      return { plant: data.plant, intro: data.intro };
+    } catch {
+      return null;
+    }
+  }, []);
+
+  const clear = useCallback(() => {
+    try {
+      localStorage.removeItem("plant-explorer:current-plant");
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  return { restore, clear };
 }

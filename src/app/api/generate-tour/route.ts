@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import ZAI from "z-ai-web-dev-sdk";
-import { getPlantById, PLANT_TEMPLATES } from "@/lib/plant/templates";
+import { getPlantById } from "@/lib/plant/templates";
 import { EQUIPMENT_LIBRARY } from "@/lib/plant/equipmentLibrary";
+import type { PlantTemplate } from "@/lib/plant/types";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -11,18 +12,26 @@ export const maxDuration = 60;
  * Uses the LLM to write a conversational, natural narration with
  * emotion hints for the TTS engine. This is the NotebookLM pattern:
  * the LLM writes the script, then a high-quality TTS renders it.
+ *
+ * Accepts either a `plantId` (for legacy hardcoded templates) or a full
+ * `plant` object (for plants built by the layout engine). The full-plant
+ * path is the new default.
  */
 export async function POST(req: NextRequest) {
-  let body: { plantId: string };
+  let body: { plantId?: string; plant?: PlantTemplate };
   try {
-    body = (await req.json()) as { plantId: string };
+    body = (await req.json()) as { plantId?: string; plant?: PlantTemplate };
   } catch {
     return NextResponse.json({ error: "Invalid JSON" }, { status: 400 });
   }
 
-  const plant = getPlantById(body.plantId);
+  // Prefer the full plant object (new path); fall back to legacy lookup
+  let plant: PlantTemplate | undefined = body.plant;
+  if (!plant && body.plantId) {
+    plant = getPlantById(body.plantId);
+  }
   if (!plant) {
-    return NextResponse.json({ error: "Plant not found" }, { status: 404 });
+    return NextResponse.json({ error: "Plant not provided" }, { status: 400 });
   }
 
   // Build a rich description of the plant for the LLM

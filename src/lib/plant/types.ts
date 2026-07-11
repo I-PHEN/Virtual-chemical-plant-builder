@@ -182,4 +182,10 @@ export interface PlantBuilderResult {
   plantId: string;
   plantName: string;
   intro: string;
+  /** The full plant template, computed by the layout engine. Null if no match. */
+  plant?: PlantTemplate;
+  /** Stage names in flow order — shown in the build progress UI */
+  stages?: string[];
+  /** Total equipment count — shown in the build progress UI */
+  equipmentCount?: number;
 }

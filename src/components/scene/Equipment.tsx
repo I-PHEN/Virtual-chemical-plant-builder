@@ -6,7 +6,7 @@ import { Html, Billboard } from "@react-three/drei";
 import * as THREE from "three";
 import type { EquipmentInstance } from "@/lib/plant/types";
 import { getEquipmentMeta } from "@/lib/plant/equipmentLibrary";
-import { EquipmentModel } from "./models/EquipmentModels";
+import { EquipmentRenderer } from "./models/EquipmentRenderer";
 import { useAppStore } from "@/lib/store/useAppStore";
 
 interface EquipmentProps {
@@ -49,7 +49,12 @@ export function Equipment({ equipment }: EquipmentProps) {
   if (isHidden) {
     return (
       <group ref={groupRef} position={equipment.position}>
-        <EquipmentModel type={equipment.type} color={meta.color} dimmed />
+        <EquipmentRenderer
+          equipment={equipment}
+          color={meta.color}
+          dimmed
+          plantId={useAppStore.getState().currentPlant?.id}
+        />
       </group>
     );
   }
@@ -78,11 +83,12 @@ export function Equipment({ equipment }: EquipmentProps) {
         focusEquipment(equipment.id);
       }}
     >
-      <EquipmentModel
-        type={equipment.type}
+      <EquipmentRenderer
+        equipment={equipment}
         color={meta.color}
         emphasized={isActive}
         selected={isSelected}
+        plantId={useAppStore.getState().currentPlant?.id}
       />
 
       {/* selection ring on ground with glow */}
