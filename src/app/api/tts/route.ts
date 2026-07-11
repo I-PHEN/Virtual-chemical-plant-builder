@@ -88,10 +88,15 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    return NextResponse.json({ error: "TTS returned unexpected format", fallback: true }, { status: 200 });
+    // If TTS returned unexpected format, signal fallback to browser TTS
+    return NextResponse.json({ fallback: true, message: "TTS returned unexpected format" }, { status: 200 });
   } catch (err) {
     console.error("[tts] all TTS providers failed", err);
-    return NextResponse.json({ error: "TTS failed", fallback: true }, { status: 200 });
+    // Signal the client to use browser TTS as a last resort
+    return NextResponse.json({
+      fallback: true,
+      message: "All TTS providers failed — use browser SpeechSynthesis",
+    }, { status: 200 });
   }
 }
 

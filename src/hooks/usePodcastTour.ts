@@ -96,42 +96,77 @@ export function usePodcastTour() {
     if (currentSegment >= audioBuffers.length) return;
 
     const ctx = audioContextRef.current;
+    // Resume AudioContext if suspended (browser autoplay policy)
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => { /* ignore */ });
+    }
+
     const buffer = audioBuffers[currentSegment];
+    const seg = segments[currentSegment];
+
+    // Check if this is a silent fallback buffer (duration < 2s = likely silence)
+    const isSilent = buffer.duration < 2;
 
     // Stop any existing playback
     if (sourceNodeRef.current) {
       try { sourceNodeRef.current.stop(); } catch { /* ignore */ }
     }
 
-    const source = ctx.createBufferSource();
-    source.buffer = buffer;
-    source.connect(ctx.destination);
-    source.onended = () => {
-      // Move to next segment
-      setCurrentSegment((prev) => {
-        const next = prev + 1;
-        if (next < audioBuffers.length) {
-          // Focus the camera on the next equipment
-          const nextSeg = segments[next];
-          if (nextSeg?.equipmentId) {
-            focusEquipment(nextSeg.equipmentId);
+    if (isSilent && seg?.text) {
+      // Use browser SpeechSynthesis as fallback for this segment
+      if ("speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        const utter = new SpeechSynthesisUtterance(seg.text);
+        utter.rate = 1.0;
+        utter.onend = () => {
+          // Move to next segment
+          setCurrentSegment((prev) => {
+            const next = prev + 1;
+            if (next < audioBuffers.length) {
+              const nextSeg = segments[next];
+              if (nextSeg?.equipmentId) {
+                focusEquipment(nextSeg.equipmentId);
+              }
+              setTimeout(() => play(), 300);
+              return next;
+            } else {
+              setIsPlaying(false);
+              return prev;
+            }
+          });
+        };
+        window.speechSynthesis.speak(utter);
+      }
+    } else {
+      // Play the audio buffer normally
+      const source = ctx.createBufferSource();
+      source.buffer = buffer;
+      source.connect(ctx.destination);
+      source.onended = () => {
+        // Only advance if this source is still the current one
+        if (sourceNodeRef.current !== source) return;
+        setCurrentSegment((prev) => {
+          const next = prev + 1;
+          if (next < audioBuffers.length) {
+            const nextSeg = segments[next];
+            if (nextSeg?.equipmentId) {
+              focusEquipment(nextSeg.equipmentId);
+            }
+            setTimeout(() => play(), 500);
+            return next;
+          } else {
+            setIsPlaying(false);
+            return prev;
           }
-          // Auto-play next segment
-          setTimeout(() => play(), 500);
-          return next;
-        } else {
-          // Tour complete
-          setIsPlaying(false);
-          return prev;
-        }
-      });
-    };
-    source.start();
-    sourceNodeRef.current = source;
+        });
+      };
+      source.start();
+      sourceNodeRef.current = source;
+    }
+
     setIsPlaying(true);
 
     // Focus camera on current segment's equipment
-    const seg = segments[currentSegment];
     if (seg?.equipmentId) {
       focusEquipment(seg.equipmentId);
     }
@@ -142,6 +177,10 @@ export function usePodcastTour() {
     if (sourceNodeRef.current) {
       try { sourceNodeRef.current.stop(); } catch { /* ignore */ }
       sourceNodeRef.current = null;
+    }
+    // Also stop browser TTS if it's running
+    if ("speechSynthesis" in window) {
+      window.speechSynthesis.cancel();
     }
     setIsPlaying(false);
   }, []);
@@ -202,7 +241,10 @@ export function usePodcastTour() {
       if (sourceNodeRef.current) {
         try { sourceNodeRef.current.stop(); } catch { /* ignore */ }
       }
-      if (audioContextRef.current) {
+      // Don't close the AudioContext if it came from the pre-generated tour
+      // (it's shared with the global __preGeneratedTour)
+      const pre = (window as any).__preGeneratedTour;
+      if (audioContextRef.current && (!pre || pre.audioContext !== audioContextRef.current)) {
         try { audioContextRef.current.close(); } catch { /* ignore */ }
       }
     };

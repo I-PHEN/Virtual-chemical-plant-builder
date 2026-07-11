@@ -130,13 +130,15 @@ export function GLBStorageTank({
 
 /**
  * Renders GLB chimney models as part of the industrial backdrop.
+ * Placed far away (120m+) so they're silhouettes on the horizon, not
+ * competing with the plant equipment visually.
  */
 export function GLBChimneys() {
   const positions: { file: string; pos: [number, number, number]; scale: number }[] = [
-    { file: "chimney-large.glb", pos: [-50, 0, -40], scale: 8 },
-    { file: "chimney-medium.glb", pos: [-45, 0, -45], scale: 6 },
-    { file: "chimney-small.glb", pos: [45, 0, -40], scale: 5 },
-    { file: "chimney-basic.glb", pos: [50, 0, -45], scale: 4 },
+    { file: "chimney-large.glb", pos: [-90, 0, -70], scale: 10 },
+    { file: "chimney-medium.glb", pos: [-85, 0, -75], scale: 7 },
+    { file: "chimney-small.glb", pos: [85, 0, -70], scale: 6 },
+    { file: "chimney-basic.glb", pos: [90, 0, -75], scale: 5 },
   ];
 
   const material = useMemo(() => {
@@ -164,19 +166,23 @@ export function GLBChimneys() {
 
 /**
  * Renders GLB buildings as distant industrial backdrop.
+ * Placed at 120m+ radius so they're clearly separated from the plant
+ * (which occupies ~50m radius). Only 4 buildings to avoid clutter.
  */
 export function GLBBuildings() {
   const positions = useMemo(() => {
     const arr: { file: string; pos: [number, number, number]; scale: number; rot: number }[] = [];
-    const radius = 70;
-    BUILDING_GLB_FILES.forEach((file, i) => {
-      const angle = (i / BUILDING_GLB_FILES.length) * Math.PI * 2;
-      const x = Math.cos(angle) * radius * (0.8 + Math.random() * 0.3);
-      const z = Math.sin(angle) * radius * (0.8 + Math.random() * 0.3);
+    const radius = 130;
+    // Only use 4 buildings — less clutter, more distance
+    const files = ["building-a.glb", "building-d.glb", "building-h.glb", "building-q.glb"];
+    files.forEach((file, i) => {
+      const angle = (i / files.length) * Math.PI * 2 + Math.PI / 4;
+      const x = Math.cos(angle) * radius;
+      const z = Math.sin(angle) * radius;
       arr.push({
         file,
         pos: [x, 0, z],
-        scale: 8 + Math.random() * 6,
+        scale: 12,
         rot: Math.random() * Math.PI * 2,
       });
     });

@@ -36,9 +36,10 @@ async function generateTourForChat(plantId: string): Promise<void> {
     const segments: { text: string; equipmentId?: string; emotion?: string }[] = scriptData.segments || [];
     if (segments.length === 0) return;
 
-    // Step 2: Render each segment to audio via Cartesia TTS
+    // Step 2: Render each segment to audio via TTS
     const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
     const buffers: AudioBuffer[] = [];
+    let allFailed = false;
 
     for (const segment of segments) {
       try {
@@ -47,23 +48,32 @@ async function generateTourForChat(plantId: string): Promise<void> {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ text: segment.text }),
         });
-        if (!ttsRes.ok) continue;
+        if (!ttsRes.ok) throw new Error("TTS failed");
         const contentType = ttsRes.headers.get("content-type") || "";
-        if (!contentType.includes("audio")) continue;
+        if (!contentType.includes("audio")) {
+          // Fallback signal from server — use browser TTS for this segment
+          throw new Error("Server signaled fallback");
+        }
         const arrayBuffer = await ttsRes.arrayBuffer();
         const audioBuffer = await audioCtx.decodeAudioData(arrayBuffer);
         buffers.push(audioBuffer);
       } catch {
-        const silence = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+        // TTS failed — create a buffer with silence
+        // The play function will use browser SpeechSynthesis as fallback
+        const silence = audioCtx.createBuffer(1, audioCtx.sampleRate * 1, audioCtx.sampleRate);
         buffers.push(silence);
+        allFailed = true;
       }
     }
 
+    // If ALL segments failed, still set the tour as ready with text-only segments
+    // (the player will use browser TTS to read each segment)
     (window as any).__preGeneratedTour = {
       segments,
       audioBuffers: buffers,
       audioContext: audioCtx,
       ready: true,
+      useBrowserTTS: allFailed,
     };
     console.log(`[tour] Chat-phase pre-generated ${segments.length} segments`);
   } catch (err) {
@@ -422,7 +432,7 @@ function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterS
             <Loader2 className="h-3 w-3 animate-spin text-sky-400" />
             <span className="text-[10px] font-medium text-sky-300">Building plant…</span>
             <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-black/40">
-              <div className="h-full w-1/3 animate-pulse rounded-full bg-sky-400" />
+              <div className="h-full w-full animate-pulse rounded-full bg-sky-400" />
             </div>
           </div>
         )}
@@ -432,7 +442,7 @@ function MessageBubble({ message, onEnterSim }: { message: ChatMessage; onEnterS
             <Loader2 className="h-3 w-3 animate-spin text-violet-400" />
             <span className="text-[10px] font-medium text-violet-300">Generating tour narration…</span>
             <div className="h-0.5 flex-1 overflow-hidden rounded-full bg-black/40">
-              <div className="h-full w-1/3 animate-pulse rounded-full bg-violet-400" />
+              <div className="h-full w-full animate-pulse rounded-full bg-violet-400" />
             </div>
           </div>
         )}
