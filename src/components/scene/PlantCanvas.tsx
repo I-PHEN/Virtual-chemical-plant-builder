@@ -15,6 +15,7 @@ import { PipeRackStructure, Bund, Platform, Stairway } from "./Structures";
 import { SafetyShower, FireExtinguisher, WarningSign, DrainageChannel, ServiceRoad } from "./SafetySystems";
 import { SteamPlume, DustParticles } from "./AtmosphericEffects";
 import { ControlPanel, CableTray, SafetyCone, SpinningFan, WorkerFigure, HandrailSection } from "./IndustrialClutter";
+import { GLBChimneys, GLBBuildings } from "./GLBModels";
 
 export function PlantCanvas() {
   const currentPlant = useAppStore((s) => s.currentPlant);
@@ -37,6 +38,9 @@ export function PlantCanvas() {
         <Environment />
         <Ground />
         <IndustrialBackdrop />
+        {/* Real GLB backdrop models — buildings and chimneys */}
+        <GLBBuildings />
+        <GLBChimneys />
         <CameraController />
         {/* Environment HDRI for realistic metal reflections */}
         <DreiEnvironment preset="warehouse" />
