@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useRef, useEffect, useMemo } from "react";
 import { useThree, useFrame } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -41,10 +41,46 @@ export function CameraRig({ equipment }: CameraRigProps) {
   const currentPlant = useAppStore((s) => s.currentPlant);
   const isAssistantSpeaking = useAppStore((s) => s.isAssistantSpeaking);
 
+  // ─── Compute plant bounding box for camera framing ───
+  // The layout engine centers the plant on origin, but the actual extent
+  // varies (ammonia is 65×105m, a small distillation plant might be 40×40m).
+  // We compute the bounding box once per plant so the camera can frame it.
+  const plantBounds = useMemo(() => {
+    if (equipment.length === 0) {
+      return { centerX: 0, centerZ: 0, diagonal: 80, maxHeight: 10 };
+    }
+    const xs = equipment.map((e) => e.position[0]);
+    const zs = equipment.map((e) => e.position[2]);
+    const minX = Math.min(...xs);
+    const maxX = Math.max(...xs);
+    const minZ = Math.min(...zs);
+    const maxZ = Math.max(...zs);
+    const centerX = (minX + maxX) / 2;
+    const centerZ = (minZ + maxZ) / 2;
+    const width = maxX - minX;
+    const depth = maxZ - minZ;
+    const diagonal = Math.hypot(width, depth);
+    // Estimate max height from equipment types (columns/reformers are tall)
+    const maxHeight = equipment.some((e) => e.type === "column" || e.type === "reformer" || e.type === "flareStack") ? 50 : 20;
+    return { centerX, centerZ, diagonal: Math.max(diagonal, 40), maxHeight };
+  }, [equipment]);
+
+  // Initial camera position: framed to see the whole plant from a 35° angle
+  const initialCamPos = useMemo(() => {
+    const d = plantBounds.diagonal;
+    return new THREE.Vector3(
+      plantBounds.centerX,
+      d * 0.45, // height = 45% of diagonal (good aerial angle)
+      plantBounds.centerZ + d * 0.6 // distance = 60% of diagonal
+    );
+  }, [plantBounds]);
+
+  const maxDist = Math.max(plantBounds.diagonal * 1.5, 80);
+
   const mode = useRef<"manual" | "flying" | "orbiting">("manual");
-  const targetPos = useRef(new THREE.Vector3(24, 32, 48));
-  const targetLook = useRef(new THREE.Vector3(0, 1, 0));
-  const orbitCenter = useRef(new THREE.Vector3(0, 1, 0));
+  const targetPos = useRef(initialCamPos.clone());
+  const targetLook = useRef(new THREE.Vector3(plantBounds.centerX, 1, plantBounds.centerZ));
+  const orbitCenter = useRef(new THREE.Vector3(plantBounds.centerX, 1, plantBounds.centerZ));
   const orbitAngle = useRef(0);
   const orbitRadius = useRef(8);
   const orbitHeight = useRef(4);
@@ -53,6 +89,21 @@ export function CameraRig({ equipment }: CameraRigProps) {
   const userInteracted = useRef(false);
   const lastFocusId = useRef<string | null>(null);
   const lastTourStep = useRef<number | null>(null);
+
+  // When a new plant loads, snap the camera to the initial framing position
+  // so the user immediately sees the whole plant (not the inside of one piece).
+  useEffect(() => {
+    if (equipment.length === 0) return;
+    camera.position.copy(initialCamPos);
+    if (controlsRef.current) {
+      controlsRef.current.target.set(plantBounds.centerX, 1, plantBounds.centerZ);
+      controlsRef.current.update();
+    }
+    targetPos.current.copy(initialCamPos);
+    targetLook.current.set(plantBounds.centerX, 1, plantBounds.centerZ);
+    userInteracted.current = false;
+    mode.current = "manual";
+  }, [equipment, initialCamPos, plantBounds, camera]);
 
   // Track manual interaction on the canvas — IMMEDIATELY ends cinematic mode.
   // Listen on both the canvas and the window to catch wheel events reliably
@@ -144,12 +195,22 @@ export function CameraRig({ equipment }: CameraRigProps) {
       if (!userInteracted.current && !focusId && tourStep === null) {
         idleTime.current += delta;
         const t = idleTime.current;
-        const driftX = 24 + Math.sin(t * 0.1) * 2;
-        const driftY = 32 + Math.sin(t * 0.15) * 0.5;
-        const driftZ = 48 + Math.cos(t * 0.1) * 2;
-        camera.position.lerp(new THREE.Vector3(driftX, driftY, driftZ), 0.012);
+        const baseX = initialCamPos.x;
+        const baseY = initialCamPos.y;
+        const baseZ = initialCamPos.z;
+        camera.position.lerp(
+          new THREE.Vector3(
+            baseX + Math.sin(t * 0.1) * 2,
+            baseY + Math.sin(t * 0.15) * 0.5,
+            baseZ + Math.cos(t * 0.1) * 2
+          ),
+          0.012
+        );
         if (controlsRef.current) {
-          controlsRef.current.target.lerp(new THREE.Vector3(0, 1, 0), 0.02);
+          controlsRef.current.target.lerp(
+            new THREE.Vector3(plantBounds.centerX, 1, plantBounds.centerZ),
+            0.02
+          );
           controlsRef.current.update();
         }
       }
@@ -208,12 +269,12 @@ export function CameraRig({ equipment }: CameraRigProps) {
       enablePan
       enableRotate
       minDistance={3}
-      maxDistance={120}
+      maxDistance={maxDist}
       maxPolarAngle={Math.PI / 2.05}
       zoomSpeed={1.0}
       rotateSpeed={0.8}
       panSpeed={0.8}
-      target={[0, 1, 0]}
+      target={[plantBounds.centerX, 1, plantBounds.centerZ]}
       makeDefault
     />
   );

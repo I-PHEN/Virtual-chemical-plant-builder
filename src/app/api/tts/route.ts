@@ -23,7 +23,43 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Empty text" }, { status: 400 });
   }
 
-  // ─── 1. Cartesia (primary — best quality when credits available) ───
+  // ─── 1. Deepgram Aura-2 (primary — natural neural voices, free credit) ───
+  const deepgramKey = process.env.DEEPGRAM_API_KEY;
+  if (deepgramKey) {
+    try {
+      // Deepgram Aura TTS API — REST endpoint
+      // Available voices: aura-asteria-en (female), aura-luna-en (female),
+      // aura-stella-en (female), aura-athena-en (female), aura-hera-en (female),
+      // aura-orion-en (male), aura-arcas-en (male), aura-perseus-en (male),
+      // aura-boreas-en (male), aura-helios-en (male)
+      const voice = body.voice === "male" ? "aura-orion-en" : "aura-asteria-en";
+
+      const response = await fetch(`https://api.deepgram.com/v1/speak?model=${voice}`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Token ${deepgramKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          text: text,
+        }),
+      });
+
+      if (response.ok) {
+        const audioBuffer = await response.arrayBuffer();
+        return new NextResponse(audioBuffer, {
+          headers: { "Content-Type": "audio/mpeg", "Content-Length": audioBuffer.byteLength.toString(), "Cache-Control": "private, max-age=600" },
+        });
+      } else {
+        const errText = await response.text();
+        console.error("[tts] Deepgram error:", response.status, errText.substring(0, 200));
+      }
+    } catch (err) {
+      console.error("[tts] Deepgram failed", err);
+    }
+  }
+
+  // ─── 2. Cartesia (secondary — when credits are available) ───
   const cartesiaKey = process.env.CARTESIA_API_KEY;
   if (cartesiaKey) {
     try {
@@ -50,42 +86,6 @@ export async function POST(req: NextRequest) {
       }
     } catch (err) {
       console.error("[tts] Cartesia failed", err);
-    }
-  }
-
-  // ─── 2. Deepgram Aura-2 (secondary — free $200 credit) ───
-  const deepgramKey = process.env.DEEPGRAM_API_KEY;
-  if (deepgramKey) {
-    try {
-      // Deepgram Aura TTS API — REST endpoint
-      // Available voices: aura-asteria-en (female), aura-luna-en (female),
-      // aura-stella-en (female), aura-athena-en (female), aura-hera-en (female),
-      // aura-orion-en (male), aura-arcas-en (male), aura-perseus-en (male),
-      // aura-boreas-en (male), aura-helios-en (male)
-      const voice = body.voice === "male" ? "aura-orion-en" : "aura-asteria-en";
-      
-      const response = await fetch("https://api.deepgram.com/v1/speak?model=aura-asteria-en", {
-        method: "POST",
-        headers: {
-          "Authorization": `Token ${deepgramKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          text: text,
-        }),
-      });
-
-      if (response.ok) {
-        const audioBuffer = await response.arrayBuffer();
-        return new NextResponse(audioBuffer, {
-          headers: { "Content-Type": "audio/mpeg", "Content-Length": audioBuffer.byteLength.toString(), "Cache-Control": "private, max-age=600" },
-        });
-      } else {
-        const errText = await response.text();
-        console.error("[tts] Deepgram error:", response.status, errText.substring(0, 200));
-      }
-    } catch (err) {
-      console.error("[tts] Deepgram failed", err);
     }
   }
 
