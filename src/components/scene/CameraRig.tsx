@@ -38,6 +38,7 @@ export function CameraRig({ equipment }: CameraRigProps) {
 
   const focusId = useAppStore((s) => s.focusEquipmentId);
   const tourStep = useAppStore((s) => s.tourStep);
+  const tourActive = useAppStore((s) => s.tourActive);
   const currentPlant = useAppStore((s) => s.currentPlant);
   const isAssistantSpeaking = useAppStore((s) => s.isAssistantSpeaking);
 
@@ -137,8 +138,9 @@ export function CameraRig({ equipment }: CameraRigProps) {
     if (!eq) return;
     const target = new THREE.Vector3(...eq.position);
     orbitCenter.current.copy(target);
-    orbitRadius.current = 7.5;
-    orbitHeight.current = 3.5;
+    // Wider orbit so you see the equipment in context with its neighbors
+    orbitRadius.current = 14;
+    orbitHeight.current = 6;
     orbitAngle.current = 0.6;
     const startPos = new THREE.Vector3(
       target.x + Math.cos(orbitAngle.current) * orbitRadius.current,
@@ -162,9 +164,12 @@ export function CameraRig({ equipment }: CameraRigProps) {
     if (!eq) return;
     const target = new THREE.Vector3(...eq.position);
     orbitCenter.current.copy(target);
-    orbitRadius.current = 7.0;
-    orbitHeight.current = 3.2;
-    orbitAngle.current = 0.6 + tourStep * 0.4;
+    // Wide cinematic orbit — 14m radius, 6m height
+    orbitRadius.current = 14;
+    orbitHeight.current = 6;
+    // Vary the starting angle per step so each piece is approached from a
+    // different direction — feels like a real walkthrough, not a loop
+    orbitAngle.current = 0.6 + tourStep * 0.8;
     const startPos = new THREE.Vector3(
       target.x + Math.cos(orbitAngle.current) * orbitRadius.current,
       target.y + orbitHeight.current,
@@ -217,42 +222,50 @@ export function CameraRig({ equipment }: CameraRigProps) {
       return;
     }
 
-    // FLYING mode — approach the target position
+    // FLYING mode — approach the target position (faster lerp = snappier)
     if (mode.current === "flying") {
-      camera.position.lerp(targetPos.current, 0.05);
+      camera.position.lerp(targetPos.current, 0.08);
       if (controlsRef.current) {
-        controlsRef.current.target.lerp(targetLook.current, 0.06);
+        controlsRef.current.target.lerp(targetLook.current, 0.08);
         controlsRef.current.update();
       }
-      if (camera.position.distanceTo(targetPos.current) < 0.3) {
+      if (camera.position.distanceTo(targetPos.current) < 0.5) {
         mode.current = "orbiting";
         orbitUntil.current = performance.now() + 12000;
       }
       return;
     }
 
-    // ORBITING mode — slow cinematic orbit, only while AI is speaking
+    // ORBITING mode — cinematic orbit around the focused equipment.
+    // Keeps orbiting as long as the tour is active OR the AI is speaking,
+    // so the camera is never static during narration.
     if (mode.current === "orbiting") {
       const now = performance.now();
-      if (!isAssistantSpeaking && now > orbitUntil.current) {
+      // Keep orbiting if: tour is playing, AI is speaking, or within the grace period
+      const shouldKeepOrbiting = tourActive || isAssistantSpeaking || now < orbitUntil.current;
+      if (!shouldKeepOrbiting) {
         mode.current = "manual";
         return;
       }
-      if (isAssistantSpeaking) {
-        orbitUntil.current = now + 4000;
+      // Extend the grace period while the tour is active
+      if (tourActive) {
+        orbitUntil.current = now + 6000;
       }
-      orbitAngle.current += delta * 0.15;
+      // Visible orbit speed — 0.25 rad/s = full revolution in ~25s
+      orbitAngle.current += delta * 0.25;
       const target = orbitCenter.current;
+      // Slight height variation for a "drone" feel
+      const heightWobble = Math.sin(orbitAngle.current * 0.5) * 1.5;
       const desired = new THREE.Vector3(
         target.x + Math.cos(orbitAngle.current) * orbitRadius.current,
-        target.y + orbitHeight.current,
+        target.y + orbitHeight.current + heightWobble,
         target.z + Math.sin(orbitAngle.current) * orbitRadius.current
       );
-      camera.position.lerp(desired, 0.035);
+      camera.position.lerp(desired, 0.05);
       if (controlsRef.current) {
         controlsRef.current.target.lerp(
           target.clone().add(new THREE.Vector3(0, 1, 0)),
-          0.04
+          0.05
         );
         controlsRef.current.update();
       }

@@ -26,6 +26,8 @@ interface AppState {
   // Tour
   tourStep: number | null;
   tourAutoAdvance: boolean;
+  /** Whether the podcast tour is actively playing audio right now */
+  tourActive: boolean;
   /** What kind of action the last assistant reply included (for tour logic) */
   lastAssistantActionKind: string | null;
   /** Timestamp of the last user message (for tour pause logic) */
@@ -53,6 +55,7 @@ interface AppState {
   showAll: () => void;
   setTourStep: (step: number | null) => void;
   setTourAutoAdvance: (v: boolean) => void;
+  setTourActive: (v: boolean) => void;
   setLastAssistantActionKind: (kind: string | null) => void;
   markUserMessage: () => void;
   addMessage: (msg: ChatMessage) => void;
@@ -78,6 +81,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   tourStep: null,
   tourAutoAdvance: true,
+  tourActive: false,
   lastAssistantActionKind: null,
   lastUserMessageAt: 0,
 
@@ -156,6 +160,7 @@ export const useAppStore = create<AppState>((set, get) => ({
 
   setTourStep: (step) => set({ tourStep: step }),
   setTourAutoAdvance: (v) => set({ tourAutoAdvance: v }),
+  setTourActive: (v) => set({ tourActive: v }),
   setLastAssistantActionKind: (kind) => set({ lastAssistantActionKind: kind }),
   markUserMessage: () => set({ lastUserMessageAt: Date.now() }),
 

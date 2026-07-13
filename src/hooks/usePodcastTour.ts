@@ -37,6 +37,8 @@ export function usePodcastTour() {
   const advanceLockRef = useRef(false); // prevents double-advancing
 
   const focusEquipment = useAppStore((s) => s.focusEquipment);
+  const setTourStep = useAppStore((s) => s.setTourStep);
+  const setTourActive = useAppStore((s) => s.setTourActive);
 
   // Keep ref in sync
   useEffect(() => {
@@ -53,9 +55,18 @@ export function usePodcastTour() {
       currentSegmentRef.current = next;
       setCurrentSegment(next);
       const nextSeg = segmentsRef.current[next];
+      // Always trigger a camera move — if the segment has an equipmentId,
+      // focus that equipment; otherwise cycle to the next equipment in the
+      // plant's process steps so the camera keeps moving through the plant.
       if (nextSeg?.equipmentId) {
         focusEquipment(nextSeg.equipmentId);
+      } else {
+        // Fall back: pick the equipment at this tour step index
+        const plant = useAppStore.getState().currentPlant;
+        const stepEq = plant?.processSteps[next % (plant.processSteps.length)]?.equipmentId;
+        if (stepEq) focusEquipment(stepEq);
       }
+      setTourStep(next);
       // Play next segment after a short pause
       setTimeout(() => {
         advanceLockRef.current = false;
@@ -66,9 +77,11 @@ export function usePodcastTour() {
       isPlayingRef.current = false;
       setIsPlaying(false);
       setTourComplete(true);
+      setTourActive(false);
+      setTourStep(null);
       advanceLockRef.current = false;
     }
-  }, [focusEquipment]);
+  }, [focusEquipment, setTourStep, setTourActive]);
 
   // Play a specific segment by index
   const playSegment = useCallback((index: number) => {
@@ -95,11 +108,18 @@ export function usePodcastTour() {
 
     isPlayingRef.current = true;
     setIsPlaying(true);
+    setTourActive(true);
 
-    // Focus camera
+    // Always trigger a camera move for this segment
     if (seg?.equipmentId) {
       focusEquipment(seg.equipmentId);
+    } else {
+      // Fall back: pick the equipment at this tour step index
+      const plant = useAppStore.getState().currentPlant;
+      const stepEq = plant?.processSteps[index % (plant.processSteps.length)]?.equipmentId;
+      if (stepEq) focusEquipment(stepEq);
     }
+    setTourStep(index);
 
     // Check if silent fallback (duration < 2s)
     if (buffer.duration < 2 && seg?.text && typeof window !== "undefined" && "speechSynthesis" in window) {
@@ -156,6 +176,7 @@ export function usePodcastTour() {
   const pause = useCallback(() => {
     isPlayingRef.current = false;
     setIsPlaying(false);
+    setTourActive(false);
     if (sourceNodeRef.current) {
       try { sourceNodeRef.current.stop(); } catch {}
       sourceNodeRef.current = null;
@@ -163,7 +184,7 @@ export function usePodcastTour() {
     if (typeof window !== "undefined" && "speechSynthesis" in window) {
       window.speechSynthesis.cancel();
     }
-  }, []);
+  }, [setTourActive]);
 
   // Skip forward
   const skip = useCallback(() => {
