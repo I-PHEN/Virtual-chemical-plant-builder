@@ -52,3 +52,12 @@ prompt
 server.log
 # Skills directory
 /skills/
+
+# User-uploaded screenshots and downloaded deliverables — never push these
+/upload/
+/download/
+/tool-results/
+/worklog.md
+/agent-ctx/
+/mini-services/
+/examples/
